@@ -4,3 +4,6 @@ build/
 local.properties
 *.apk
 *.iml
+
+# local device screenshots may show neighbors' device addresses - keep them out of git
+docs/phone_*.png
