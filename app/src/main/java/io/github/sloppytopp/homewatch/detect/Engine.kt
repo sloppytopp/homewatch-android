@@ -3,7 +3,7 @@ package io.github.sloppytopp.homewatch.detect
 enum class Level { OFF, OK, WATCH, ALERT }
 
 data class DomainState(val level: Level, val message: String)
-data class TrackerRow(val addr: String, val label: String, val rssi: Int, val seenS: Long, val agoS: Long)
+data class TrackerRow(val addr: String, val label: String, val rssi: Int, val seenS: Long, val agoS: Long, val mine: Boolean = false)
 data class DroneRow(val addr: String, val info: RemoteIdInfo, val rssi: Int, val agoS: Long, val via: String)
 data class EventRow(val ts: Long, val domain: String, val level: Level, val msg: String)
 
@@ -41,6 +41,7 @@ class Engine(
     private val clock: () -> Long = { System.currentTimeMillis() },
     private val onAlert: (domain: String, genericText: String) -> Unit = { _, _ -> },
     private val eventSink: (EventRow) -> Unit = {},
+    private val isMine: (String) -> Boolean = { false },
 ) {
     private class Sighting(val kind: Kind, val label: String, val first: Long) {
         var last = first
@@ -151,7 +152,9 @@ class Engine(
         sightings.entries.removeIf { now - it.value.last > FORGET_MS }
         val live = sightings.filter { now - it.value.last <= WINDOW_MS }
         val bleDrones = live.filter { it.value.kind == Kind.DRONE }
-        val trackers = live.filter { it.value.kind == Kind.TRACKER }
+        val allTrackers = live.filter { it.value.kind == Kind.TRACKER }
+        val trackers = allTrackers.filter { !isMine(it.key) }   // your own trackers never raise a flag
+        val mineCount = allTrackers.size - trackers.size
         val wifiFresh = wifiAt != 0L && now - wifiAt <= WIFI_FRESH_MS
 
         // ---- drone: Remote ID is unauthenticated, so word it as a claim
@@ -192,7 +195,8 @@ class Engine(
             val lvl = if (close) Level.ALERT else Level.WATCH
             emit("tracker", lvl, "tracker:$addr", msg, 900_000, now)
             DomainState(lvl, msg)
-        } else DomainState(Level.OK, "No separated trackers in range ($adsSeen Bluetooth ads heard, $ambient normal Apple devices ignored)")
+        } else DomainState(Level.OK, "No unknown trackers in range ($adsSeen Bluetooth ads heard, $ambient normal Apple devices ignored" +
+            (if (mineCount > 0) ", $mineCount of your own trackers" else "") + ")")
         if (trackerState.level == Level.ALERT && lastTrackerLevel != Level.ALERT) onAlert("tracker", "A tracker has stayed close to the house.")
         lastTrackerLevel = trackerState.level
 
@@ -221,7 +225,7 @@ class Engine(
             drone = if (running) droneState else off.drone,
             tracker = if (running) trackerState else off.tracker,
             camera = if (running) cameraState else off.camera,
-            trackers = trackers.map { (a, s) -> TrackerRow(a, s.label, s.rssi, (s.last - s.first) / 1000, (now - s.last) / 1000) }
+            trackers = allTrackers.map { (a, s) -> TrackerRow(a, s.label, s.rssi, (s.last - s.first) / 1000, (now - s.last) / 1000, isMine(a)) }
                 .sortedByDescending { it.rssi },
             drones = droneRows,
             wifi = if (wifiFresh) wifiRows else emptyList(),

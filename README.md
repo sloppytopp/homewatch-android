@@ -14,8 +14,9 @@ using only the phone's own Bluetooth radio. **No account, no cloud, no analytics
 - [x] On-device history (30 days), "I heard my sensor beep" log and report with a background baseline, delete-all button
 - [x] **Nearby** tab: every Wi-Fi network and (optionally) every Bluetooth device in a list with signal bars; tap a network to mark it yours
 - [x] **Tap-to-find**: tap a flagged tile or the alert notification -> hot/cold meter, warmer/colder arrow, turn-in-place compass sweep (trackers), GPS + compass arrow with distance (drones that broadcast a position), Wi-Fi source meter
+- [x] **"This is mine"** for your own trackers (they stop flagging and show green), and a real compass dial (smoothed heading, calibration hint) in the finders
 - [x] "Is it working?" feedback: breathing dot, live counts and scan ages, plain-language banner, guided 30-second sweep, first-run welcome, night switch on every screen
-- [x] 32 unit tests (same packet fixtures as the Linux tool)
+- [x] 35 unit tests (same packet fixtures as the Linux tool)
 - [ ] Optional RTL-SDR support; one-time "Pro" extras. Core detection stays free.
 
 ## Read this first

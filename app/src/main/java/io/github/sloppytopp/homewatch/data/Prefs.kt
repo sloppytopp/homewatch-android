@@ -18,6 +18,7 @@ object Prefs {
     var home by mutableStateOf<Home?>(null); private set
     var mySsids by mutableStateOf<Set<String>>(emptySet()); private set
     var welcomed by mutableStateOf(false); private set
+    var myDevices by mutableStateOf<Set<String>>(emptySet()); private set
 
     fun init(ctx: Context) {
         sp = ctx.getSharedPreferences("homewatch", Context.MODE_PRIVATE)
@@ -25,9 +26,13 @@ object Prefs {
         alertStyle = runCatching { AlertStyle.valueOf(sp.getString("alert", "CHIME")!!) }.getOrDefault(AlertStyle.CHIME)
         if (sp.contains("home_lat")) home = Home(Double.fromBits(sp.getLong("home_lat", 0)), Double.fromBits(sp.getLong("home_lon", 0)), sp.getString("home_note", "") ?: "")
         welcomed = sp.getBoolean("welcomed", false)
+        myDevices = sp.getStringSet("my_devices", emptySet()) ?: emptySet()
         mySsids = sp.getStringSet("my_ssids", emptySet()) ?: emptySet()
     }
 
+    fun isMine(addr: String) = addr in myDevices
+    fun markMine(addr: String) { myDevices = myDevices + addr; sp.edit().putStringSet("my_devices", myDevices).apply() }
+    fun unmarkMine(addr: String) { myDevices = myDevices - addr; sp.edit().putStringSet("my_devices", myDevices).apply() }
     fun saveWelcomed() { welcomed = true; sp.edit().putBoolean("welcomed", true).apply() }
     fun saveNight(v: Boolean) { night = v; sp.edit().putBoolean("night", v).apply() }
     fun saveAlertStyle(v: AlertStyle) { alertStyle = v; sp.edit().putString("alert", v.name).apply() }

@@ -10,7 +10,8 @@ import io.github.sloppytopp.homewatch.detect.Snapshot
 /** Process-wide hub: the service feeds the engine, the UI observes [snapshot]. */
 object Monitor {
     var onAlert: (String, String) -> Unit = { _, _ -> }
-    val engine = Engine(onAlert = { d, t -> onAlert(d, t) }, eventSink = { runCatching { Store.addEvent(it) } })
+    val engine = Engine(onAlert = { d, t -> onAlert(d, t) }, eventSink = { runCatching { Store.addEvent(it) } },
+        isMine = { runCatching { io.github.sloppytopp.homewatch.data.Prefs.isMine(it) }.getOrDefault(false) })
     var snapshot by mutableStateOf(Snapshot())
         private set
 

@@ -102,6 +102,7 @@ private fun DroneHunt(onClose: () -> Unit) {
                     val bearing = Geo.bearingDeg(fix.lat, fix.lon, m.latitude, m.longitude)
                     val rel = ((bearing - heading + 360) % 360).toFloat()
                     Arrow(rel)
+                    CompassDial(heading, null, bearing, compass.accuracy.value <= 1)
                     val turn = when { rel < 20 || rel > 340 -> "straight ahead"; rel < 160 -> "turn right ${Math.round(rel)}°"; rel > 200 -> "turn left ${Math.round(360 - rel)}°"; else -> "behind you" }
                     Text("${Math.round(dist)} m away - $turn  (${Geo.compass(bearing)})", fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
                     Meter((1 - (dist / 500.0).coerceIn(0.0, 1.0)).toFloat(), "closer = fuller bar (0-500 m)")

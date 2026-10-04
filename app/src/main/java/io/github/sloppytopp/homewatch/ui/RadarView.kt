@@ -40,7 +40,7 @@ private fun blips(s: Snapshot): List<Blip> {
         out += Blip(w.bssid, w.ssid, Geo.rssiToMeters(w.level, -45), c)
     }
     val tcol = if (s.tracker.level == Level.ALERT) UiColors.alert else UiColors.watch
-    for (t in s.trackers) out += Blip(t.addr, t.label.substringBefore(" SEPARATED"), Geo.rssiToMeters(t.rssi, -59), tcol)
+    for (t in s.trackers) out += Blip(t.addr, (if (t.mine) "Yours: " else "") + t.label.substringBefore(" SEPARATED"), Geo.rssiToMeters(t.rssi, -59), if (t.mine) UiColors.good else tcol)
     for (d in s.drones) out += Blip(d.addr, "DRONE", Geo.rssiToMeters(d.rssi, if (d.via == "Wi-Fi") -45 else -59), UiColors.alert, triangle = true)
     return out
 }

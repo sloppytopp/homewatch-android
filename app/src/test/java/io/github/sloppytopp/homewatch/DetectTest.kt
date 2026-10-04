@@ -221,3 +221,34 @@ class DirectionTest {
         assertNull(Trend.of(listOf(-70, -71)))
     }
 }
+
+
+class MineAndSmoothTest {
+    private var t = 9_000_000L
+    private val sep = Classification(Kind.TRACKER, "Tile tracker")
+
+    @Test fun ownTrackerNeverFlags() {
+        val mine = setOf("AA")
+        val alerts = mutableListOf<String>()
+        val e = Engine({ t }, { d, _ -> alerts += d }, isMine = { it in mine }).also { it.running = true }
+        repeat(12) { t += 40_000; e.onAdvertisement("AA", -55, sep) }   // persistent AND close - but it is yours
+        val s = e.snapshot()
+        assertEquals(Level.OK, s.tracker.level)
+        assertTrue(s.tracker.message.contains("your own"))
+        assertTrue(s.trackers.single().mine)
+        assertTrue(alerts.isEmpty())
+    }
+    @Test fun unknownTrackerStillFlagsNextToYours() {
+        val e = Engine({ t }, isMine = { it == "AA" }).also { it.running = true }
+        e.onAdvertisement("AA", -50, sep); e.onAdvertisement("BB", -60, sep)
+        val s = e.snapshot()
+        assertEquals(Level.WATCH, s.tracker.level)
+        assertTrue(s.tracker.message.contains("BB"))
+    }
+    @Test fun smootherHandlesWrapAround() {
+        val sm = AngleSmoother(0.5)
+        sm.update(359.0)
+        val x = sm.update(1.0)
+        assertTrue("wrap should stay near north, was $x", x > 350 || x < 10)
+    }
+}

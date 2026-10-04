@@ -99,7 +99,7 @@ fun NearbyScreen() {
             DeviceRow(signalBars(d.rssi), "DRONE (claims Remote ID)", "${d.info.basicId ?: d.addr}", d.rssi, "DRONE", UiColors.alert) { finding = d.addr to "Drone broadcast" }
         }
         s.trackers.forEach { t ->
-            DeviceRow(signalBars(t.rssi), t.label, "${t.addr} · seen ${ago(t.seenS * 1000)}", t.rssi, "TRACKER", UiColors.watch) { finding = t.addr to t.label }
+            DeviceRow(signalBars(t.rssi), t.label, "${t.addr} · seen ${ago(t.seenS * 1000)}", t.rssi, if (t.mine) "YOURS" else "TRACKER", if (t.mine) UiColors.good else UiColors.watch) { finding = t.addr to t.label }
         }
         if (Monitor.inspecting) {
             val known = s.trackers.map { it.addr }.toSet()
@@ -173,17 +173,20 @@ internal fun Finder(addr: String, label: String, onClose: () -> Unit) {
                     if (rssi < -78) Text("Heads up: at $rssi dBm it is faint - most likely in another building or far room. Direction hints get reliable once you're closer than about -70 dBm, so first walk toward wherever it gets stronger.", fontSize = 12.sp)
                 }
 
+                val mineNow = addr in Prefs.myDevices
+                TextButton(onClick = { if (mineNow) Prefs.unmarkMine(addr) else Prefs.markMine(addr); Monitor.refresh() }) {
+                    Text(if (mineNow) "Marked as YOURS - tap to flag it again" else "This is mine - stop flagging it")
+                }
                 Text("Compass sweep", fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(top = 6.dp))
+                if (hasCompass) CompassDial(heading, finder, answer?.bearingDeg, compass.accuracy.value <= 1)
                 if (!hasCompass) Text("This phone has no compass sensor, so use the warmer/colder arrow.", fontSize = 12.sp)
                 else if (sweeping) {
                     val left = (40 - (System.currentTimeMillis() - sweepAt) / 1000).coerceAtLeast(0)
-                    Text("Turn slowly in a full circle, phone flat in front of you. ${finder.coveredSectors()}/8 directions covered - $left s left.", fontSize = 12.sp)
-                    Dial(finder, heading)
+                    Text("Turn slowly in a full circle, phone flat in front of you. ${finder.coveredSectors()}/8 directions covered - $left s left. The orange wedges grow toward the strongest signal.", fontSize = 12.sp)
                     TextButton(onClick = { sweeping = false; answer = finder.result(); answered = true }) { Text("Finish now") }
                 } else {
                     Text("Hold the phone flat, then turn slowly in place for a full circle. Your body blocks the signal, so it is usually strongest when you face the tracker.", fontSize = 12.sp)
                     answer?.let { r ->
-                        Dial(finder, null, r.bearingDeg)
                         Text(if (r.confident) "Strongest signal is toward ${Geo.compass(r.bearingDeg)} (about ${r.bearingDeg.toInt()}°). Walk that way a few steps, then check the warmer/colder arrow."
                         else "No clear direction (signal varied only ${"%.1f".format(r.spreadDb)} dB around the circle). Walk a few steps and sweep again, or rely on warmer/colder.", fontSize = 13.sp)
                     }
@@ -198,20 +201,3 @@ internal fun Finder(addr: String, label: String, onClose: () -> Unit) {
 }
 
 private fun resetFinder(f: DirectionFinder) = f.reset()
-
-/** Eight sector bars around a circle (length = signal in that direction) plus an arrow to the strongest side. */
-@Composable
-private fun Dial(f: DirectionFinder, liveHeading: Float?, bearing: Double? = null) {
-    Canvas(Modifier.fillMaxWidth().aspectRatio(1.6f)) {
-        val c = Offset(size.width / 2, size.height / 2); val r = size.height / 2 - 6.dp.toPx()
-        drawCircle(UiColors.ring, r, c, style = Stroke(1.dp.toPx()))
-        for (i in 0 until 8) {
-            val m = f.meanDbm(i) ?: continue
-            val len = r * ((m + 100) / 60.0).coerceIn(0.05, 1.0).toFloat()
-            val a = Math.toRadians((i + 0.5) * 45.0 - 90)
-            drawLine(UiColors.watch, c, Offset(c.x + len * cos(a).toFloat(), c.y + len * sin(a).toFloat()), 9.dp.toPx())
-        }
-        bearing?.let { b -> val a = Math.toRadians(b - 90); drawLine(UiColors.alert, c, Offset(c.x + r * cos(a).toFloat(), c.y + r * sin(a).toFloat()), 3.dp.toPx()) }
-        liveHeading?.let { h -> val a = Math.toRadians(h.toDouble() - 90); drawLine(UiColors.good, c, Offset(c.x + r * cos(a).toFloat(), c.y + r * sin(a).toFloat()), 2.dp.toPx()) }
-    }
-}
