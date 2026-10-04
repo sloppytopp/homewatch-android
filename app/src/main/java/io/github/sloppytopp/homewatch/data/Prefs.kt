@@ -1,6 +1,10 @@
 package io.github.sloppytopp.homewatch.data
 
+import android.content.ComponentName
 import android.content.Context
+import android.content.pm.PackageManager
+import java.security.MessageDigest
+import java.security.SecureRandom
 import android.content.SharedPreferences
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -19,6 +23,10 @@ object Prefs {
     var mySsids by mutableStateOf<Set<String>>(emptySet()); private set
     var welcomed by mutableStateOf(false); private set
     var myDevices by mutableStateOf<Set<String>>(emptySet()); private set
+    var discreet by mutableStateOf(false); private set
+    var rooms by mutableStateOf<List<String>>(emptyList()); private set
+    var hasPin by mutableStateOf(false); private set
+    var launcher by mutableStateOf(0); private set   // 0 Homewatch, 1 Notes, 2 Weather
 
     fun init(ctx: Context) {
         sp = ctx.getSharedPreferences("homewatch", Context.MODE_PRIVATE)
@@ -27,6 +35,10 @@ object Prefs {
         if (sp.contains("home_lat")) home = Home(Double.fromBits(sp.getLong("home_lat", 0)), Double.fromBits(sp.getLong("home_lon", 0)), sp.getString("home_note", "") ?: "")
         welcomed = sp.getBoolean("welcomed", false)
         myDevices = sp.getStringSet("my_devices", emptySet()) ?: emptySet()
+        discreet = sp.getBoolean("discreet", false)
+        rooms = (sp.getString("rooms", "") ?: "").split("|").filter { it.isNotBlank() }
+        hasPin = sp.contains("pin_hash")
+        launcher = sp.getInt("launcher", 0)
         mySsids = sp.getStringSet("my_ssids", emptySet()) ?: emptySet()
     }
 
@@ -48,4 +60,37 @@ object Prefs {
         mySsids = mySsids + ssid; sp.edit().putStringSet("my_ssids", mySsids).apply()
     }
     fun forgetSsid(ssid: String) { mySsids = mySsids - ssid; sp.edit().putStringSet("my_ssids", mySsids).apply() }
+
+    fun addRoom(name: String) { val n = name.trim().take(24).replace("|", ""); if (n.isNotEmpty() && n !in rooms) { rooms = rooms + n; sp.edit().putString("rooms", rooms.joinToString("|")).apply() } }
+    fun removeRoom(name: String) { rooms = rooms - name; sp.edit().putString("rooms", rooms.joinToString("|")).apply() }
+
+    fun saveDiscreet(v: Boolean) { discreet = v; sp.edit().putBoolean("discreet", v).apply() }
+
+    private fun hash(salt: String, pin: String) =
+        MessageDigest.getInstance("SHA-256").digest((salt + pin).toByteArray()).joinToString("") { "%02x".format(it) }
+
+    /** PIN is stored only as a salted hash on this phone. There is no recovery: forgetting it means clearing app data. */
+    fun savePin(pin: String?) {
+        if (pin == null) { sp.edit().remove("pin_hash").remove("pin_salt").apply(); hasPin = false; return }
+        val salt = ByteArray(8).also { SecureRandom().nextBytes(it) }.joinToString("") { "%02x".format(it) }
+        sp.edit().putString("pin_salt", salt).putString("pin_hash", hash(salt, pin)).apply(); hasPin = true
+    }
+
+    fun checkPin(pin: String): Boolean {
+        val salt = sp.getString("pin_salt", null) ?: return false
+        val want = sp.getString("pin_hash", null) ?: return false
+        return MessageDigest.isEqual(want.toByteArray(), hash(salt, pin).toByteArray())
+    }
+
+    /** Switch which launcher entry (name + icon) is shown. Only one alias is enabled at a time. */
+    fun saveLauncher(ctx: Context, which: Int) {
+        val names = listOf(".LauncherDefault", ".LauncherNotes", ".LauncherWeather")
+        names.forEachIndexed { i, n ->
+            ctx.packageManager.setComponentEnabledSetting(
+                ComponentName(ctx.packageName, ctx.packageName + n),
+                if (i == which) PackageManager.COMPONENT_ENABLED_STATE_ENABLED else PackageManager.COMPONENT_ENABLED_STATE_DISABLED,
+                PackageManager.DONT_KILL_APP)
+        }
+        launcher = which; sp.edit().putInt("launcher", which).apply()
+    }
 }

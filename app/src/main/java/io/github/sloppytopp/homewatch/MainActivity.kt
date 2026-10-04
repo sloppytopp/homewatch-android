@@ -1,6 +1,9 @@
 package io.github.sloppytopp.homewatch
 
 import android.Manifest
+import android.app.Activity
+import android.os.SystemClock
+import android.view.WindowManager
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -54,6 +57,7 @@ import io.github.sloppytopp.homewatch.scan.Monitor
 import io.github.sloppytopp.homewatch.scan.ScanService
 import io.github.sloppytopp.homewatch.ui.DroneMapView
 import io.github.sloppytopp.homewatch.ui.Heartbeat
+import io.github.sloppytopp.homewatch.ui.LockScreen
 import io.github.sloppytopp.homewatch.ui.HuntHost
 import io.github.sloppytopp.homewatch.ui.LiveBanner
 import io.github.sloppytopp.homewatch.ui.Meter
@@ -64,6 +68,7 @@ import io.github.sloppytopp.homewatch.ui.HistoryScreen
 import io.github.sloppytopp.homewatch.ui.HomewatchTheme
 import io.github.sloppytopp.homewatch.ui.Level
 import io.github.sloppytopp.homewatch.ui.RadarView
+import io.github.sloppytopp.homewatch.ui.RoomsScreen
 import io.github.sloppytopp.homewatch.ui.SettingsScreen
 import io.github.sloppytopp.homewatch.ui.StatusTile
 import io.github.sloppytopp.homewatch.ui.UiColors
@@ -109,24 +114,44 @@ class MainActivity : ComponentActivity() {
 
     private fun handleIntent(i: Intent?) { i?.getStringExtra("hunt")?.let { Monitor.hunt = it } }
 
+    private var lastStop = 0L
+    private var firstStart = true
+
+    override fun onStart() {
+        super.onStart()
+        if (Prefs.hasPin && (firstStart || SystemClock.elapsedRealtime() - lastStop > 30_000)) Monitor.locked = true
+        firstStart = false
+    }
+
+    override fun onStop() { super.onStop(); lastStop = SystemClock.elapsedRealtime() }
+
     override fun onResume() { super.onResume(); Monitor.refresh() }
 }
 
 @Composable
 private fun Root() {
     var tab by rememberSaveable { mutableIntStateOf(0) }
+    val ctx0 = LocalContext.current
+    androidx.compose.runtime.LaunchedEffect(Prefs.discreet) {
+        val w = (ctx0 as? Activity)?.window
+        if (Prefs.discreet) w?.addFlags(WindowManager.LayoutParams.FLAG_SECURE) else w?.clearFlags(WindowManager.LayoutParams.FLAG_SECURE)
+    }
+    if (Monitor.locked) { LockScreen(); return }
     Monitor.hunt?.let { d -> HuntHost(d) { Monitor.hunt = null } }
     Column(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding()) {
         Row(Modifier.fillMaxWidth().padding(start = 16.dp, end = 12.dp, top = 4.dp), verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
             Heartbeat(Monitor.snapshot.running)
             Text("  Homewatch", color = UiColors.text, fontSize = 20.sp, modifier = Modifier.weight(1f))
+            TextButton(onClick = { (ctx0 as? Activity)?.finishAndRemoveTask() }, contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 8.dp)) {
+                Text("✕", color = UiColors.dim, fontSize = 18.sp)
+            }
             Text("Night", color = UiColors.dim, fontSize = 12.sp, modifier = Modifier.padding(end = 6.dp))
             Switch(checked = Prefs.night, onCheckedChange = { Prefs.saveNight(it) })
         }
         Row(Modifier.fillMaxWidth().padding(horizontal = 4.dp), horizontalArrangement = Arrangement.SpaceBetween) {
-            listOf("Status", "Nearby", "Radar", "History", "Settings").forEachIndexed { i, name ->
+            listOf("Status", "Nearby", "Rooms", "Radar", "History", "Settings").forEachIndexed { i, name ->
                 TextButton(onClick = { tab = i }, contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 6.dp)) {
-                    Text(name, color = if (tab == i) UiColors.text else UiColors.faint, fontSize = if (tab == i) 15.sp else 13.sp)
+                    Text(name, color = if (tab == i) UiColors.text else UiColors.faint, fontSize = if (tab == i) 14.sp else 12.sp)
                 }
             }
         }
@@ -134,8 +159,9 @@ private fun Root() {
             when (tab) {
                 0 -> StatusScreen()
                 1 -> NearbyScreen()
-                2 -> { RadarView(Monitor.snapshot); Text("Drone map", color = UiColors.text, fontSize = 16.sp); DroneMapView(Monitor.snapshot) }
-                3 -> HistoryScreen()
+                2 -> RoomsScreen()
+                3 -> { RadarView(Monitor.snapshot); Text("Drone map", color = UiColors.text, fontSize = 16.sp); DroneMapView(Monitor.snapshot) }
+                4 -> HistoryScreen()
                 else -> SettingsScreen()
             }
         }

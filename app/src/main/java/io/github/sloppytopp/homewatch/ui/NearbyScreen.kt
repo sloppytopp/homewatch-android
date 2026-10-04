@@ -173,6 +173,11 @@ internal fun Finder(addr: String, label: String, onClose: () -> Unit) {
                     if (rssi < -78) Text("Heads up: at $rssi dBm it is faint - most likely in another building or far room. Direction hints get reliable once you're closer than about -70 dBm, so first walk toward wherever it gets stronger.", fontSize = 12.sp)
                 }
 
+                val likely = remember(addr) { io.github.sloppytopp.homewatch.detect.RoomBook.likelyRoom("ble:$addr", io.github.sloppytopp.homewatch.data.Store.latestScans()) }
+                likely?.let { l ->
+                    Text("From your room sweeps: probably in ${l.room} (${Math.round(l.rssi)} dBm" + (l.marginDb?.let { ", ${Math.round(it)} dB louder than the next room" } ?: ", heard only there") + ").",
+                        fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                }
                 val mineNow = addr in Prefs.myDevices
                 TextButton(onClick = { if (mineNow) Prefs.unmarkMine(addr) else Prefs.markMine(addr); Monitor.refresh() }) {
                     Text(if (mineNow) "Marked as YOURS - tap to flag it again" else "This is mine - stop flagging it")

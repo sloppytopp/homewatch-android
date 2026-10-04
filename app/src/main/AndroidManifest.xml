@@ -21,13 +21,24 @@
         android:name=".HomewatchApp"
         android:allowBackup="false"
         android:label="Homewatch"
+        android:icon="@mipmap/ic_launcher_hw"
         android:theme="@style/Theme.Homewatch">
-        <activity android:name=".MainActivity" android:exported="true" android:launchMode="singleTop">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
-        </activity>
+        <activity android:name=".MainActivity" android:exported="true" android:launchMode="singleTop" />
+
+        <!-- Launcher entries: only one is enabled at a time (Settings -> Privacy -> App name and icon). -->
+        <activity-alias android:name=".LauncherDefault" android:targetActivity=".MainActivity" android:enabled="true" android:exported="true"
+            android:label="Homewatch" android:icon="@mipmap/ic_launcher_hw">
+            <intent-filter><action android:name="android.intent.action.MAIN" /><category android:name="android.intent.category.LAUNCHER" /></intent-filter>
+        </activity-alias>
+        <activity-alias android:name=".LauncherNotes" android:targetActivity=".MainActivity" android:enabled="false" android:exported="true"
+            android:label="Notes" android:icon="@mipmap/ic_launcher_notes">
+            <intent-filter><action android:name="android.intent.action.MAIN" /><category android:name="android.intent.category.LAUNCHER" /></intent-filter>
+        </activity-alias>
+        <activity-alias android:name=".LauncherWeather" android:targetActivity=".MainActivity" android:enabled="false" android:exported="true"
+            android:label="Weather" android:icon="@mipmap/ic_launcher_weather">
+            <intent-filter><action android:name="android.intent.action.MAIN" /><category android:name="android.intent.category.LAUNCHER" /></intent-filter>
+        </activity-alias>
+
         <service
             android:name=".scan.ScanService"
             android:exported="false"

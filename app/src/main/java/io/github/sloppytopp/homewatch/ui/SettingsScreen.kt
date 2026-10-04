@@ -114,6 +114,8 @@ fun SettingsScreen() {
         }
         Text("Never a voice. Vibrate is best when you are walking toward a device.", color = UiColors.faint, fontSize = 11.sp)
 
+        PrivacySection()
+
         Text("Home location", color = UiColors.text, fontSize = 16.sp)
         Text(Prefs.home?.let { "Set: %.5f, %.5f  (%s)".format(it.lat, it.lon, it.note.ifEmpty { "entered by you" }) } ?: "Not set yet. It lets the drone map show where a drone is relative to your house.",
             color = UiColors.dim, fontSize = 12.sp)

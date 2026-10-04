@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="ic_hw_bg">#0F1D15</color>
+    <color name="ic_notes_bg">#E8C547</color>
+    <color name="ic_weather_bg">#3B6EA8</color>
+</resources>

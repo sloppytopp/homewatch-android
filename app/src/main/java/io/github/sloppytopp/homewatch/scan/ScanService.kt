@@ -25,7 +25,7 @@ class ScanService : Service() {
     private var wifiN = 0
     private val tick = object : Runnable {
         override fun run() {
-            if (wifiN++ % (if (Monitor.hunt != null) 5 else 10) == 0) wifi?.poke()   // ~30 s, or ~15 s while hunting
+            if (wifiN++ % (if (Monitor.hunt != null || Monitor.fastWifi) 5 else 10) == 0) wifi?.poke()   // ~30 s, or ~15 s while hunting
             Monitor.refresh()
             val s = Monitor.snapshot
             nm().notify(ONGOING_ID, ongoing(statusLine(s.drone.level, s.tracker.level)))
@@ -82,6 +82,11 @@ class ScanService : Service() {
         nm().createNotificationChannel(NotificationChannel(CH_ONGOING, "Scanning status", NotificationManager.IMPORTANCE_LOW).apply {
             description = "Shows that Homewatch is scanning"; setShowBadge(false)
         })
+        // Generic channel names for discreet mode (channel names are visible in Android's notification settings).
+        nm().createNotificationChannel(NotificationChannel(CH_D_ONGOING, "Background", NotificationManager.IMPORTANCE_LOW).apply { setShowBadge(false) })
+        nm().createNotificationChannel(NotificationChannel(CH_D_CHIME, "Updates", NotificationManager.IMPORTANCE_DEFAULT))
+        nm().createNotificationChannel(NotificationChannel(CH_D_VIBRATE, "Updates (vibrate)", NotificationManager.IMPORTANCE_DEFAULT).apply { setSound(null, null); enableVibration(true) })
+        nm().createNotificationChannel(NotificationChannel(CH_D_SILENT, "Updates (quiet)", NotificationManager.IMPORTANCE_LOW).apply { setSound(null, null); enableVibration(false) })
         // Three alert styles; the user picks one in Settings. Never a voice.
         nm().createNotificationChannel(NotificationChannel(CH_ALERTS, "Alerts (soft chime)", NotificationManager.IMPORTANCE_DEFAULT).apply {
             description = "The system's soft notification sound when something is flagged"
@@ -104,22 +109,37 @@ class ScanService : Service() {
     private fun builder(channel: String): Notification.Builder =
         if (Build.VERSION.SDK_INT >= 26) Notification.Builder(this, channel) else @Suppress("DEPRECATION") Notification.Builder(this)
 
-    private fun ongoing(text: String): Notification = builder(CH_ONGOING)
-        .setSmallIcon(android.R.drawable.stat_sys_data_bluetooth).setContentTitle("Homewatch").setContentText(text)
+    private fun ongoing(text: String): Notification = builder(if (Prefs.discreet) CH_D_ONGOING else CH_ONGOING)
+        .setSmallIcon(if (Prefs.discreet) android.R.drawable.stat_notify_sync_noanim else android.R.drawable.stat_sys_data_bluetooth)
+        .setContentTitle(if (Prefs.discreet) "Background service" else "Homewatch")
+        .setContentText(if (Prefs.discreet) "Running" else text)
+        .setVisibility(if (Prefs.discreet) Notification.VISIBILITY_SECRET else Notification.VISIBILITY_PRIVATE)
         .setOngoing(true).setContentIntent(openApp())
         .addAction(Notification.Action.Builder(null, "Stop", PendingIntent.getService(
             this, 1, Intent(this, ScanService::class.java).setAction(ACTION_STOP), PendingIntent.FLAG_IMMUTABLE)).build())
         .build()
 
     private fun postAlert(domain: String, text: String) {
-        val ch = when (Prefs.alertStyle) { AlertStyle.CHIME -> CH_ALERTS; AlertStyle.VIBRATE -> CH_VIBRATE; AlertStyle.SILENT -> CH_SILENT }
-        nm().notify(ALERT_ID, builder(ch).setSmallIcon(android.R.drawable.stat_sys_data_bluetooth)
-            .setContentTitle("Homewatch").setContentText(text + " Tap to find it.").setAutoCancel(true).setContentIntent(huntIntent(domain)).build())
+        val d = Prefs.discreet
+        val ch = when (Prefs.alertStyle) {
+            AlertStyle.CHIME -> if (d) CH_D_CHIME else CH_ALERTS
+            AlertStyle.VIBRATE -> if (d) CH_D_VIBRATE else CH_VIBRATE
+            AlertStyle.SILENT -> if (d) CH_D_SILENT else CH_SILENT
+        }
+        nm().notify(ALERT_ID, builder(ch)
+            .setSmallIcon(if (d) android.R.drawable.stat_notify_sync_noanim else android.R.drawable.stat_sys_data_bluetooth)
+            .setContentTitle(if (d) "Update" else "Homewatch").setContentText(if (d) "Tap to open" else "$text Tap to find it.")
+            .setVisibility(if (d) Notification.VISIBILITY_SECRET else Notification.VISIBILITY_PRIVATE)
+            .setAutoCancel(true).setContentIntent(huntIntent(domain)).build())
     }
 
     companion object {
         const val ACTION_STOP = "io.github.sloppytopp.homewatch.STOP"
         private const val CH_ONGOING = "ongoing"
+        private const val CH_D_ONGOING = "d_ongoing"
+        private const val CH_D_CHIME = "d_chime"
+        private const val CH_D_VIBRATE = "d_vibrate"
+        private const val CH_D_SILENT = "d_silent"
         private const val CH_ALERTS = "alerts"
         private const val CH_VIBRATE = "alerts_vibrate"
         private const val CH_SILENT = "alerts_silent"

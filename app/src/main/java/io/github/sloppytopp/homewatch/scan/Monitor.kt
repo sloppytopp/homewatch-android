@@ -29,6 +29,12 @@ object Monitor {
 
     var lastSweep by mutableStateOf<String?>(null)
 
+    /** Ask for Wi-Fi scans as often as Android allows (room sweeps, hunts). */
+    var fastWifi by mutableStateOf(false)
+
+    /** True while the PIN screen is showing. */
+    var locked by mutableStateOf(false)
+
     /** Which alert the user is currently hunting ("tracker" | "drone" | "camera"), or null. */
     var hunt by mutableStateOf<String?>(null)
 

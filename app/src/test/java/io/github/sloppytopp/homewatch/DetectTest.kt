@@ -252,3 +252,43 @@ class MineAndSmoothTest {
         assertTrue("wrap should stay near north, was $x", x > 350 || x < 10)
     }
 }
+
+
+class RoomsTest {
+    private fun scan(room: String, vararg i: RoomItem) = RoomScan(room, 1L, i.toList())
+    private fun w(key: String, label: String, rssi: Double) = RoomItem("wifi:$key", "wifi", label, rssi)
+    private fun t(key: String, rssi: Double) = RoomItem("ble:$key", "tracker", "Tile tracker", rssi)
+
+    @Test fun collectorAverages() {
+        val c = SweepCollector()
+        fun snap(r: Int) = Snapshot(wifi = listOf(WifiRow("Net", "aa", r, "", "other")))
+        c.sample(snap(-60)); c.sample(snap(-70))
+        assertEquals(-65.0, c.result("Bedroom", 5).items.single().rssi, 1e-9)
+    }
+    @Test fun diffFindsNewGoneAndLouder() {
+        val before = scan("Bedroom", w("a", "Home", -50.0), w("b", "Old", -60.0), w("c", "Printer", -80.0))
+        val now = scan("Bedroom", w("a", "Home", -49.0), w("c", "Printer", -62.0), t("x", -55.0))
+        val d = RoomBook.diff(before, now)
+        assertEquals(listOf("ble:x"), d.new.map { it.key })
+        assertEquals(listOf("wifi:b"), d.gone.map { it.key })
+        assertEquals(listOf("wifi:c"), d.louder.map { it.first.key })
+    }
+    @Test fun noPreviousScanMeansNoDiff() {
+        val d = RoomBook.diff(null, scan("Bedroom", w("a", "Home", -50.0)))
+        assertTrue(d.new.isEmpty() && d.gone.isEmpty())
+    }
+    @Test fun likelyRoomPicksLoudestWithMargin() {
+        val latest = mapOf(
+            "Garage" to scan("Garage", t("x", -52.0)),
+            "Bedroom" to scan("Bedroom", t("x", -81.0)),
+            "Kitchen" to scan("Kitchen", t("x", -75.0)),
+        )
+        val l = RoomBook.likelyRoom("ble:x", latest)!!
+        assertEquals("Garage", l.room); assertEquals(23.0, l.marginDb!!, 1e-9)
+        assertEquals("Garage", RoomBook.roomSpecific(latest).single().second.room)
+    }
+    @Test fun heardInOneRoomOnly() {
+        val latest = mapOf("Garage" to scan("Garage", t("x", -60.0)), "Kitchen" to scan("Kitchen"))
+        assertNull(RoomBook.likelyRoom("ble:x", latest)!!.marginDb)
+    }
+}
