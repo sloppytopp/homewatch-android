@@ -52,6 +52,7 @@ fun HistoryScreen() {
         TextButton(onClick = { confirm = true }) { Text("Delete all history now", color = UiColors.warn) }
     }
     if (confirm) AlertDialog(
+        containerColor = UiColors.dialogBg, titleContentColor = UiColors.text, textContentColor = UiColors.text,
         onDismissRequest = { confirm = false }, title = { Text("Delete all history?") },
         text = { Text("This removes every saved event and beep from this phone. It cannot be undone.") },
         confirmButton = { TextButton(onClick = { Store.clearAll(); v++; confirm = false }) { Text("Delete") } },

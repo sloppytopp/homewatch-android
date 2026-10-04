@@ -8,6 +8,9 @@ data class DroneRow(val addr: String, val info: RemoteIdInfo, val rssi: Int, val
 data class EventRow(val ts: Long, val domain: String, val level: Level, val msg: String)
 
 /** A drone's claimed position (and operator position, live only) for the map. */
+/** Any Bluetooth device heard while 'show all devices' is on. */
+data class InspectRow(val addr: String, val name: String, val rssi: Int, val company: String, val ageS: Long)
+
 data class DroneFix(val id: String, val lat: Double?, val lon: Double?, val opLat: Double?, val opLon: Double?, val alt: Double?, val rssi: Int)
 
 data class Snapshot(
@@ -24,6 +27,10 @@ data class Snapshot(
     val ambientIgnored: Long = 0,
     val events: List<EventRow> = emptyList(),
     val error: String? = null,
+    val startedAt: Long = 0,
+    val wifiAt: Long = 0,
+    val inspect: List<InspectRow> = emptyList(),
+    val now: Long = 0,
 )
 
 /**
@@ -60,6 +67,9 @@ class Engine(
     private var wifiDrones: List<WifiHit> = emptyList()
     private var wifiCams: List<WifiHit> = emptyList()
 
+    private class Insp(var name: String, var rssi: Int, val company: String, var last: Long)
+    private val inspect = HashMap<String, Insp>()
+    @Volatile var startedAt = 0L
     private var demo: DroneFix? = null
     private var demoUntil = 0L
 
@@ -83,6 +93,18 @@ class Engine(
         if (rssi > s.rssiMax) s.rssiMax = rssi
         c.remoteId?.let { s.info = it }
     }
+
+    @Synchronized
+    fun onInspect(addr: String, name: String?, rssi: Int, companyId: Int?) {
+        val now = clock()
+        val co = companyId?.let { COMPANIES[it] ?: "company 0x%04X".format(it) } ?: ""
+        val x = inspect.getOrPut(addr) { Insp(name ?: "", rssi, co, now) }
+        x.rssi = rssi; x.last = now
+        if (!name.isNullOrEmpty()) x.name = name
+        if (inspect.size > 400) inspect.entries.removeIf { now - it.value.last > 60_000 }
+    }
+
+    @Synchronized fun clearInspect() { inspect.clear() }
 
     @Synchronized
     fun onWifiScan(obs: List<WifiObs>) {
@@ -117,7 +139,8 @@ class Engine(
 
     @Synchronized
     fun reset() {
-        sightings.clear(); events.clear(); lastEmit.clear(); adsSeen = 0; ambient = 0
+        sightings.clear(); events.clear(); lastEmit.clear(); adsSeen = 0; ambient = 0; inspect.clear()
+        startedAt = clock()
         wifiAt = 0; wifiRows = emptyList(); wifiDrones = emptyList(); wifiCams = emptyList()
         lastDroneLevel = Level.OK; lastTrackerLevel = Level.OK; lastCameraLevel = Level.OK
     }
@@ -204,6 +227,9 @@ class Engine(
             wifi = if (wifiFresh) wifiRows else emptyList(),
             fixes = fixes,
             adsSeen = adsSeen, ambientIgnored = ambient, events = events.toList(), error = error,
+            startedAt = startedAt, wifiAt = wifiAt, now = now,
+            inspect = inspect.entries.filter { now - it.value.last <= 60_000 }
+                .map { (a, x) -> InspectRow(a, x.name, x.rssi, x.company, (now - x.last) / 1000) }.sortedByDescending { it.rssi },
         )
     }
 
@@ -224,5 +250,10 @@ class Engine(
         const val FORGET_MS = 3_600_000L    // forgotten entirely after 1 h
         const val WIFI_FRESH_MS = 180_000L  // a Wi-Fi scan counts for 3 min
         const val MAX_EVENTS = 200
+        val COMPANIES = mapOf(
+            0x004C to "Apple", 0x0075 to "Samsung", 0x0006 to "Microsoft", 0x00E0 to "Google", 0x0087 to "Garmin",
+            0x0171 to "Amazon", 0x02E5 to "Espressif (IoT)", 0x0059 to "Nordic (IoT)", 0x0157 to "Huami/Amazfit",
+            0x038F to "Xiaomi", 0x0499 to "Ruuvi", 0x0310 to "Tile?", 0x00D2 to "Dialog Semiconductor", 0x0131 to "Cypress",
+        )
     }
 }

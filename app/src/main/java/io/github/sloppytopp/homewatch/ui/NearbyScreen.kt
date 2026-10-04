@@ -1,0 +1,217 @@
+package io.github.sloppytopp.homewatch.ui
+
+import android.content.Context
+import android.hardware.Sensor
+import android.hardware.SensorEvent
+import android.hardware.SensorEventListener
+import android.hardware.SensorManager
+import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableLongStateOf
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.drawscope.Stroke
+import io.github.sloppytopp.homewatch.detect.DirectionFinder
+import io.github.sloppytopp.homewatch.detect.Geo
+import io.github.sloppytopp.homewatch.detect.Trend
+import kotlin.math.cos
+import kotlin.math.sin
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Switch
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import io.github.sloppytopp.homewatch.data.Prefs
+import io.github.sloppytopp.homewatch.scan.Monitor
+import kotlinx.coroutines.delay
+
+@Composable
+private fun Chip(text: String, color: androidx.compose.ui.graphics.Color) =
+    Text(" $text ", color = color, fontSize = 10.sp, fontWeight = FontWeight.SemiBold)
+
+@Composable
+private fun DeviceRow(bars: String, title: String, sub: String, rssi: Int, chip: String? = null, chipColor: androidx.compose.ui.graphics.Color = UiColors.dim, onClick: (() -> Unit)? = null) {
+    Row(
+        Modifier.fillMaxWidth().let { if (onClick != null) it.clickable { onClick() } else it }.padding(vertical = 5.dp),
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        Text(bars, color = UiColors.good, fontSize = 14.sp, modifier = Modifier.padding(top = 2.dp))
+        Column(Modifier.weight(1f)) {
+            Row { Text(title, color = UiColors.text, fontSize = 14.sp); if (chip != null) Chip(chip, chipColor) }
+            Text(sub, color = UiColors.dim, fontSize = 11.sp)
+        }
+        Text("$rssi dBm", color = UiColors.dim, fontSize = 11.sp)
+    }
+}
+
+@Composable
+fun NearbyScreen() {
+    val ctx = LocalContext.current
+    val s = Monitor.snapshot
+    val now = rememberNow()
+    var finding by remember { mutableStateOf<Pair<String, String>?>(null) }
+    DisposableEffect(Unit) { onDispose { Monitor.setInspect(ctx, false) } } // unfiltered scan only while this screen is open
+
+    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        Text("What's around you", color = UiColors.text, fontSize = 20.sp)
+        if (!s.running) Text("Start scanning on the Status tab to fill these lists.", color = UiColors.warn, fontSize = 13.sp)
+
+        Text("Wi-Fi networks (${s.wifi.size})" + if (s.wifiAt > 0) " - scanned ${ago(now - s.wifiAt)} ago" else "", color = UiColors.text, fontSize = 15.sp)
+        Text("Tap a network to mark it as yours (it turns green on the radar). Android only allows a Wi-Fi scan every ~30 s.", color = UiColors.faint, fontSize = 11.sp)
+        if (s.wifi.isEmpty()) Text(s.camera.message.takeIf { s.camera.level == io.github.sloppytopp.homewatch.detect.Level.OFF } ?: "No networks yet...", color = UiColors.dim, fontSize = 12.sp)
+        s.wifi.forEach { w ->
+            val mine = w.ssid in Prefs.mySsids
+            DeviceRow(
+                signalBars(w.level), w.ssid, "${w.bssid}${if (w.vendor.isNotEmpty()) " · ${w.vendor}" else ""}", w.level,
+                chip = when { mine -> "YOURS"; w.klass == "camera" -> "CAMERA-LIKE"; w.klass == "drone" -> "DRONE-LIKE"; else -> null },
+                chipColor = if (mine) UiColors.good else UiColors.alert,
+                onClick = { if (mine) Prefs.forgetSsid(w.ssid) else Prefs.learnSsid(w.ssid) },
+            )
+        }
+
+        Text("Bluetooth", color = UiColors.text, fontSize = 15.sp, modifier = Modifier.padding(top = 10.dp))
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+            Text("Show every Bluetooth device (phones, watches, gadgets)", color = UiColors.dim, fontSize = 12.sp, modifier = Modifier.weight(1f).padding(end = 8.dp))
+            Switch(checked = Monitor.inspecting, onCheckedChange = { Monitor.setInspect(ctx, it) }, enabled = s.running)
+        }
+        Text("Tap any Bluetooth device to hunt for it with the hot/cold finder. Phones and watches change their address every few minutes, so one device can appear more than once.",
+            color = UiColors.faint, fontSize = 11.sp)
+        s.drones.filter { it.via == "Bluetooth" }.forEach { d ->
+            DeviceRow(signalBars(d.rssi), "DRONE (claims Remote ID)", "${d.info.basicId ?: d.addr}", d.rssi, "DRONE", UiColors.alert) { finding = d.addr to "Drone broadcast" }
+        }
+        s.trackers.forEach { t ->
+            DeviceRow(signalBars(t.rssi), t.label, "${t.addr} · seen ${ago(t.seenS * 1000)}", t.rssi, "TRACKER", UiColors.watch) { finding = t.addr to t.label }
+        }
+        if (Monitor.inspecting) {
+            val known = s.trackers.map { it.addr }.toSet()
+            val rows = s.inspect.filter { it.addr !in known }
+            Text("${rows.size} other Bluetooth devices heard in the last minute", color = UiColors.dim, fontSize = 12.sp)
+            rows.take(60).forEach { r ->
+                DeviceRow(signalBars(r.rssi), r.name.ifEmpty { "(no name)" }, "${r.addr}${if (r.company.isNotEmpty()) " · ${r.company}" else ""}", r.rssi, onClick = { finding = r.addr to r.name.ifEmpty { r.company.ifEmpty { "Bluetooth device" } } })
+            }
+        } else if (s.trackers.isEmpty() && s.drones.none { it.via == "Bluetooth" }) {
+            Text("No trackers or drones in range. Turn on \"Show every Bluetooth device\" to see all of them.", color = UiColors.dim, fontSize = 12.sp)
+        }
+    }
+
+    finding?.let { (addr, label) -> Finder(addr, label) { finding = null } }
+}
+
+/** Hot/cold finder with a warmer/colder trend and an optional turn-in-place compass sweep. */
+@Composable
+internal fun Finder(addr: String, label: String, onClose: () -> Unit) {
+    val ctx = LocalContext.current
+    val compass = rememberCompass()
+    val heading by compass.heading
+    val hasCompass = compass.available
+    val history = remember { androidx.compose.runtime.mutableStateListOf<Int>() }
+    var sweeping by remember { mutableStateOf(false) }
+    var sweepAt by remember { mutableLongStateOf(0L) }
+    val finder = remember { DirectionFinder() }
+    var answer by remember { mutableStateOf<DirectionFinder.Result?>(null) }
+    var answered by remember { mutableStateOf(false) }
+
+    fun rssiNow(): Pair<Int?, Long?> {
+        val s = Monitor.snapshot
+        s.trackers.firstOrNull { it.addr == addr }?.let { return it.rssi to it.agoS }
+        s.inspect.firstOrNull { it.addr == addr }?.let { return it.rssi to it.ageS }
+        s.drones.firstOrNull { it.addr == addr }?.let { return it.rssi to it.agoS }
+        return null to null
+    }
+
+    LaunchedEffect(addr) {
+        while (true) {
+            Monitor.refresh()
+            val (r, age) = rssiNow()
+            if (r != null && age != null && age <= 1) {
+                history.add(r); if (history.size > 12) history.removeAt(0)
+                if (sweeping) finder.add(heading.toDouble(), r)
+            }
+            if (sweeping && System.currentTimeMillis() - sweepAt > 40_000) { sweeping = false; answer = finder.result(); answered = true }
+            delay(500)
+        }
+    }
+
+    val (rssi, age) = rssiNow()
+    val trend = Trend.of(history.toList())
+    AlertDialog(
+        containerColor = UiColors.dialogBg, titleContentColor = UiColors.text, textContentColor = UiColors.text,
+        onDismissRequest = onClose,
+        title = { Text("Finding: $label") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.verticalScroll(rememberScrollState())) {
+                Text(addr, fontSize = 12.sp)
+                if (rssi == null) Text("Not heard right now. Wait a few seconds, or move closer.")
+                else {
+                    Meter(((rssi + 100) / 60f), "$rssi dBm - " + when { rssi >= -50 -> "very hot: it's right here"; rssi >= -62 -> "hot"; rssi >= -75 -> "warm"; else -> "cold" } +
+                        (age?.let { if (it > 3) " (last heard ${it}s ago)" else "" } ?: ""))
+                    Text(when (trend) {
+                        "warmer" -> "▲ Getting WARMER - keep going this way."
+                        "colder" -> "▼ Getting COLDER - turn around."
+                        "steady" -> "● No change yet - take a few steps in any direction."
+                        else -> "Take a few steps: the arrow will tell you if you're getting warmer or colder."
+                    }, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+                    if (rssi < -78) Text("Heads up: at $rssi dBm it is faint - most likely in another building or far room. Direction hints get reliable once you're closer than about -70 dBm, so first walk toward wherever it gets stronger.", fontSize = 12.sp)
+                }
+
+                Text("Compass sweep", fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(top = 6.dp))
+                if (!hasCompass) Text("This phone has no compass sensor, so use the warmer/colder arrow.", fontSize = 12.sp)
+                else if (sweeping) {
+                    val left = (40 - (System.currentTimeMillis() - sweepAt) / 1000).coerceAtLeast(0)
+                    Text("Turn slowly in a full circle, phone flat in front of you. ${finder.coveredSectors()}/8 directions covered - $left s left.", fontSize = 12.sp)
+                    Dial(finder, heading)
+                    TextButton(onClick = { sweeping = false; answer = finder.result(); answered = true }) { Text("Finish now") }
+                } else {
+                    Text("Hold the phone flat, then turn slowly in place for a full circle. Your body blocks the signal, so it is usually strongest when you face the tracker.", fontSize = 12.sp)
+                    answer?.let { r ->
+                        Dial(finder, null, r.bearingDeg)
+                        Text(if (r.confident) "Strongest signal is toward ${Geo.compass(r.bearingDeg)} (about ${r.bearingDeg.toInt()}°). Walk that way a few steps, then check the warmer/colder arrow."
+                        else "No clear direction (signal varied only ${"%.1f".format(r.spreadDb)} dB around the circle). Walk a few steps and sweep again, or rely on warmer/colder.", fontSize = 13.sp)
+                    }
+                    if (answered && answer == null) Text("Not enough readings - turn slower, and make sure the tracker is being heard (it advertises about every 2 seconds).", fontSize = 12.sp)
+                    TextButton(onClick = { answered = false; answer = null; finder.let { f -> repeat(0) {} }; sweepAt = System.currentTimeMillis(); sweeping = true; resetFinder(finder) }) { Text(if (answered) "Sweep again" else "Start compass sweep") }
+                }
+                Text("If you find something you don't own, leave it in place, photograph it, and contact local law enforcement.", fontSize = 11.sp)
+            }
+        },
+        confirmButton = { TextButton(onClick = onClose) { Text("Done") } },
+    )
+}
+
+private fun resetFinder(f: DirectionFinder) = f.reset()
+
+/** Eight sector bars around a circle (length = signal in that direction) plus an arrow to the strongest side. */
+@Composable
+private fun Dial(f: DirectionFinder, liveHeading: Float?, bearing: Double? = null) {
+    Canvas(Modifier.fillMaxWidth().aspectRatio(1.6f)) {
+        val c = Offset(size.width / 2, size.height / 2); val r = size.height / 2 - 6.dp.toPx()
+        drawCircle(UiColors.ring, r, c, style = Stroke(1.dp.toPx()))
+        for (i in 0 until 8) {
+            val m = f.meanDbm(i) ?: continue
+            val len = r * ((m + 100) / 60.0).coerceIn(0.05, 1.0).toFloat()
+            val a = Math.toRadians((i + 0.5) * 45.0 - 90)
+            drawLine(UiColors.watch, c, Offset(c.x + len * cos(a).toFloat(), c.y + len * sin(a).toFloat()), 9.dp.toPx())
+        }
+        bearing?.let { b -> val a = Math.toRadians(b - 90); drawLine(UiColors.alert, c, Offset(c.x + r * cos(a).toFloat(), c.y + r * sin(a).toFloat()), 3.dp.toPx()) }
+        liveHeading?.let { h -> val a = Math.toRadians(h.toDouble() - 90); drawLine(UiColors.good, c, Offset(c.x + r * cos(a).toFloat(), c.y + r * sin(a).toFloat()), 2.dp.toPx()) }
+    }
+}

@@ -191,3 +191,33 @@ class ReportAndGeoTest {
         assertTrue(Geo.radarFraction(2.0) < 0.33 && Geo.radarFraction(12.0) in 0.33..0.66 && Geo.radarFraction(100.0) > 0.9)
     }
 }
+
+
+class DirectionTest {
+    @Test fun strongestSectorWins() {
+        val d = DirectionFinder()
+        for (h in 0 until 360 step 10) {                        // full turn, loudest around 90 degrees (east)
+            val rssi = if (h in 60..120) -60 else -78
+            d.add(h.toDouble(), rssi); d.add(h + 3.0, rssi)
+        }
+        val r = d.result()!!
+        assertEquals(90.0, r.bearingDeg, 25.0)
+        assertTrue(r.confident)
+    }
+    @Test fun noClearSideIsNotConfident() {
+        val d = DirectionFinder()
+        for (h in 0 until 360 step 10) { d.add(h.toDouble(), -70); d.add(h + 3.0, -71) }
+        assertFalse(d.result()!!.confident)
+    }
+    @Test fun incompleteTurnGivesNoAnswer() {
+        val d = DirectionFinder()
+        for (h in 0..90 step 5) d.add(h.toDouble(), -60)
+        assertNull(d.result())
+    }
+    @Test fun trendWarmerColderSteady() {
+        assertEquals("warmer", Trend.of(listOf(-85, -84, -84, -78, -76, -75)))
+        assertEquals("colder", Trend.of(listOf(-60, -61, -62, -70, -72, -73)))
+        assertEquals("steady", Trend.of(listOf(-70, -71, -70, -70, -71, -70)))
+        assertNull(Trend.of(listOf(-70, -71)))
+    }
+}

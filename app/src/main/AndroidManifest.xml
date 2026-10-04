@@ -22,7 +22,7 @@
         android:allowBackup="false"
         android:label="Homewatch"
         android:theme="@style/Theme.Homewatch">
-        <activity android:name=".MainActivity" android:exported="true">
+        <activity android:name=".MainActivity" android:exported="true" android:launchMode="singleTop">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />

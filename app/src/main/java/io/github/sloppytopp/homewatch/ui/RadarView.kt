@@ -14,6 +14,8 @@ import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.material3.TextButton
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.dp
@@ -87,6 +89,7 @@ fun DroneMapView(s: Snapshot) {
     if (fixes.isEmpty()) {
         Text("No drone is broadcasting a position right now.", color = UiColors.dim, fontSize = 13.sp); return
     }
+    val ctx = LocalContext.current
     val tm = rememberTextMeasurer()
     val label = TextStyle(color = UiColors.dim, fontSize = 11.sp)
     val pts = ArrayList<Pair<Double, Double>>()
@@ -122,6 +125,7 @@ fun DroneMapView(s: Snapshot) {
             val dir = Geo.compass(Geo.bearingDeg(f.lat, f.lon, home.lat, home.lon))
             Text("Drone ${f.id}: ${Math.round(d)} m $dir of home, alt ${f.alt?.let { Math.round(it).toString() } ?: "?"} m" +
                 (if (f.opLat != null) " (dot = claimed operator position, shown live only)" else ""), color = UiColors.text, fontSize = 12.sp)
+            TextButton(onClick = { openInMaps(ctx, f.lat, f.lon!!, "Drone claim ${f.id}") }) { Text("Open this position in your Maps app") }
         }
         Text("Positions are whatever the broadcast claims - Remote ID can be faked.", color = UiColors.faint, fontSize = 11.sp)
     }

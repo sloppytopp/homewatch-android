@@ -117,6 +117,7 @@ fun SettingsScreen() {
         Text("Home location", color = UiColors.text, fontSize = 16.sp)
         Text(Prefs.home?.let { "Set: %.5f, %.5f  (%s)".format(it.lat, it.lon, it.note.ifEmpty { "entered by you" }) } ?: "Not set yet. It lets the drone map show where a drone is relative to your house.",
             color = UiColors.dim, fontSize = 12.sp)
+        Prefs.home?.let { h -> TextButton(onClick = { openInMaps(ctx, h.lat, h.lon, "My home") }) { Text("Show my home in your Maps app (check it's the right spot)") } }
         Text("1. Most accurate: stand at home and use your phone's GPS. Nothing is sent anywhere.", color = UiColors.dim, fontSize = 12.sp)
         Button(
             onClick = {

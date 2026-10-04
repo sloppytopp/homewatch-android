@@ -17,7 +17,7 @@ import io.github.sloppytopp.homewatch.detect.BleClassifier
  * advertisements we care about (Remote ID, Apple Find My, Tile, SmartTag, Chipolo) - which also saves battery.
  */
 @SuppressLint("MissingPermission") // permissions are checked by the caller before start()
-class BleScanner(private val ctx: Context) {
+class BleScanner(private val ctx: Context, private val inspect: Boolean = false) {
     private var scanner: BluetoothLeScanner? = null
 
     private fun uuid(short: String) = ParcelUuid.fromString("0000$short-0000-1000-8000-00805f9b34fb")
@@ -43,6 +43,11 @@ class BleScanner(private val ctx: Context) {
     private fun handle(r: ScanResult) {
         try {
             val rec = r.scanRecord ?: return
+            if (inspect) {
+                val arr = rec.manufacturerSpecificData
+                Monitor.engine.onInspect(r.device.address, rec.deviceName, r.rssi, if (arr.size() > 0) arr.keyAt(0) else null)
+                return
+            }
             val mfr = HashMap<Int, ByteArray>()
             val arr = rec.manufacturerSpecificData
             for (i in 0 until arr.size()) mfr[arr.keyAt(i)] = arr.valueAt(i)
@@ -67,7 +72,7 @@ class BleScanner(private val ctx: Context) {
             .setLegacy(false) // also receive Bluetooth 5 extended advertisements (used by some Remote ID drones)
             .setPhy(ScanSettings.PHY_LE_ALL_SUPPORTED)
             .build()
-        s.startScan(filters(), settings, callback)
+        s.startScan(if (inspect) emptyList() else filters(), settings, callback)
         scanner = s
         Monitor.engine.error = null
         return true

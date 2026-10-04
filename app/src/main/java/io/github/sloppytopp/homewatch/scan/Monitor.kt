@@ -15,4 +15,20 @@ object Monitor {
         private set
 
     fun refresh() { snapshot = engine.snapshot() }
+
+    private var inspector: BleScanner? = null
+    var inspecting by mutableStateOf(false); private set
+
+    /** Unfiltered Bluetooth scan (shows every device). Only while the Nearby screen asks for it; Android pauses it with the screen off. */
+    fun setInspect(ctx: android.content.Context, on: Boolean) {
+        if (on == inspecting) return
+        if (on) { inspector = BleScanner(ctx.applicationContext, inspect = true); if (inspector!!.start()) inspecting = true else inspector = null }
+        else { inspector?.stop(); inspector = null; inspecting = false; engine.clearInspect() }
+    }
+
+    var lastSweep by mutableStateOf<String?>(null)
+
+    /** Which alert the user is currently hunting ("tracker" | "drone" | "camera"), or null. */
+    var hunt by mutableStateOf<String?>(null)
+
 }

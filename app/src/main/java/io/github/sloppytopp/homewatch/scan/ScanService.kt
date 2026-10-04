@@ -25,7 +25,7 @@ class ScanService : Service() {
     private var wifiN = 0
     private val tick = object : Runnable {
         override fun run() {
-            if (wifiN++ % 10 == 0) wifi?.poke()   // every ~30 s
+            if (wifiN++ % (if (Monitor.hunt != null) 5 else 10) == 0) wifi?.poke()   // ~30 s, or ~15 s while hunting
             Monitor.refresh()
             val s = Monitor.snapshot
             nm().notify(ONGOING_ID, ongoing(statusLine(s.drone.level, s.tracker.level)))
@@ -47,7 +47,7 @@ class ScanService : Service() {
         val n = ongoing("Starting...")
         if (Build.VERSION.SDK_INT >= 29) startForeground(ONGOING_ID, n, ServiceInfo.FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE)
         else startForeground(ONGOING_ID, n)
-        Monitor.onAlert = { _, text -> postAlert(text) }
+        Monitor.onAlert = { domain, text -> postAlert(domain, text) }
         Monitor.engine.reset()
         scanner = BleScanner(this)
         val ok = scanner!!.start()
@@ -97,6 +97,10 @@ class ScanService : Service() {
     private fun openApp() = PendingIntent.getActivity(
         this, 0, Intent(this, MainActivity::class.java), PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
 
+    private fun huntIntent(domain: String) = PendingIntent.getActivity(
+        this, 100 + domain.hashCode().and(0xFF), Intent(this, MainActivity::class.java).putExtra("hunt", domain).addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP),
+        PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
+
     private fun builder(channel: String): Notification.Builder =
         if (Build.VERSION.SDK_INT >= 26) Notification.Builder(this, channel) else @Suppress("DEPRECATION") Notification.Builder(this)
 
@@ -107,10 +111,10 @@ class ScanService : Service() {
             this, 1, Intent(this, ScanService::class.java).setAction(ACTION_STOP), PendingIntent.FLAG_IMMUTABLE)).build())
         .build()
 
-    private fun postAlert(text: String) {
+    private fun postAlert(domain: String, text: String) {
         val ch = when (Prefs.alertStyle) { AlertStyle.CHIME -> CH_ALERTS; AlertStyle.VIBRATE -> CH_VIBRATE; AlertStyle.SILENT -> CH_SILENT }
         nm().notify(ALERT_ID, builder(ch).setSmallIcon(android.R.drawable.stat_sys_data_bluetooth)
-            .setContentTitle("Homewatch").setContentText(text).setAutoCancel(true).setContentIntent(openApp()).build())
+            .setContentTitle("Homewatch").setContentText(text + " Tap to find it.").setAutoCancel(true).setContentIntent(huntIntent(domain)).build())
     }
 
     companion object {

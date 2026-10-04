@@ -51,6 +51,7 @@ object UiColors {
     val neutral get() = if (Prefs.night) Color(0xFF4A1C1C) else Color(0xFF7A7A7A)
     val alert get() = if (Prefs.night) Color(0xFFAA4040) else Color(0xFFC06A6A)
     val watch get() = if (Prefs.night) Color(0xFF8C3434) else Color(0xFFB39A55)
+    val dialogBg get() = if (Prefs.night) Color(0xFF0A0303) else Color(0xFF101010)
     val buttonBg get() = if (Prefs.night) Color(0xFF1A0707) else Color(0xFF1C2A22)
     val buttonFg get() = if (Prefs.night) Color(0xFF8C3030) else Color(0xFF9CC7AB)
 }

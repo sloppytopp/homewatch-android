@@ -1,6 +1,7 @@
 package io.github.sloppytopp.homewatch.ui
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -22,9 +23,10 @@ import androidx.compose.ui.unit.sp
 
 /** Status is always word + icon + color, never color alone (color-blind safe). */
 @Composable
-fun StatusTile(title: String, level: Level, message: String) {
+fun StatusTile(title: String, level: Level, message: String, onClick: (() -> Unit)? = null) {
     Row(
         Modifier.fillMaxWidth().clip(RoundedCornerShape(10.dp)).background(level.containerC())
+            .let { if (onClick != null) it.clickable { onClick() } else it }
             .height(IntrinsicSize.Min)
     ) {
         Box(Modifier.width(5.dp).fillMaxHeight().background(level.accentC()))
@@ -34,6 +36,7 @@ fun StatusTile(title: String, level: Level, message: String) {
                 color = level.accentC(), fontSize = 15.sp, fontWeight = FontWeight.SemiBold,
             )
             Text(message, color = UiColors.dim, fontSize = 13.sp)
+            if (onClick != null) Text("Tap to find it  ▸", color = level.accentC(), fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
         }
     }
 }
