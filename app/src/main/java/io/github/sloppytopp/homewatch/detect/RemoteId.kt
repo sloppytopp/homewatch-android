@@ -103,4 +103,8 @@ object RemoteId {
     /** BLE 0xFFFA service data: [app code 0x0D][counter][25-byte message or pack]. */
     fun fromBleServiceData(p: ByteArray): RemoteIdInfo =
         if (p.size >= 27 && u8(p, 0) == 0x0D) parsePack(p.copyOfRange(2, p.size)) else parsePack(p)
+
+    /** Wi-Fi beacon vendor IE data after the FA:0B:BC OUI: [0x0D][counter][message pack]. */
+    fun fromWifiVendorData(d: ByteArray): RemoteIdInfo =
+        if (d.size >= 3 && u8(d, 0) == 0x0D) parsePack(d.copyOfRange(2, d.size)) else parsePack(d)
 }

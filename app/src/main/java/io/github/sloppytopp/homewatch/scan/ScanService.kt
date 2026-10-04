@@ -13,14 +13,19 @@ import android.os.Handler
 import android.os.IBinder
 import android.os.Looper
 import io.github.sloppytopp.homewatch.MainActivity
+import io.github.sloppytopp.homewatch.data.AlertStyle
+import io.github.sloppytopp.homewatch.data.Prefs
 import io.github.sloppytopp.homewatch.detect.Level
 
 /** Foreground service (Android requires a visible notification for background scanning). Soft chime on alerts, never a voice. */
 class ScanService : Service() {
     private val handler = Handler(Looper.getMainLooper())
     private var scanner: BleScanner? = null
+    private var wifi: WifiScanner? = null
+    private var wifiN = 0
     private val tick = object : Runnable {
         override fun run() {
+            if (wifiN++ % 10 == 0) wifi?.poke()   // every ~30 s
             Monitor.refresh()
             val s = Monitor.snapshot
             nm().notify(ONGOING_ID, ongoing(statusLine(s.drone.level, s.tracker.level)))
@@ -46,6 +51,7 @@ class ScanService : Service() {
         Monitor.engine.reset()
         scanner = BleScanner(this)
         val ok = scanner!!.start()
+        wifi = WifiScanner(this).also { it.start() }
         Monitor.engine.running = ok
         if (!ok) { Monitor.refresh(); stopSelf(); return START_NOT_STICKY }
         handler.removeCallbacks(tick); handler.post(tick)
@@ -55,6 +61,7 @@ class ScanService : Service() {
     private fun stopScanning() {
         handler.removeCallbacks(tick)
         scanner?.stop(); scanner = null
+        wifi?.stop(); wifi = null
         Monitor.engine.running = false
         Monitor.refresh()
         stopForeground(STOP_FOREGROUND_REMOVE)
@@ -64,6 +71,7 @@ class ScanService : Service() {
     override fun onDestroy() {
         handler.removeCallbacks(tick)
         scanner?.stop()
+        wifi?.stop()
         Monitor.engine.running = false
         Monitor.refresh()
         super.onDestroy()
@@ -74,9 +82,15 @@ class ScanService : Service() {
         nm().createNotificationChannel(NotificationChannel(CH_ONGOING, "Scanning status", NotificationManager.IMPORTANCE_LOW).apply {
             description = "Shows that Homewatch is scanning"; setShowBadge(false)
         })
-        // IMPORTANCE_DEFAULT = the system's normal soft notification sound (no voice) + vibration. User can change it in Settings.
-        nm().createNotificationChannel(NotificationChannel(CH_ALERTS, "Alerts", NotificationManager.IMPORTANCE_DEFAULT).apply {
-            description = "A soft chime when something is flagged"
+        // Three alert styles; the user picks one in Settings. Never a voice.
+        nm().createNotificationChannel(NotificationChannel(CH_ALERTS, "Alerts (soft chime)", NotificationManager.IMPORTANCE_DEFAULT).apply {
+            description = "The system's soft notification sound when something is flagged"
+        })
+        nm().createNotificationChannel(NotificationChannel(CH_VIBRATE, "Alerts (vibrate only)", NotificationManager.IMPORTANCE_DEFAULT).apply {
+            description = "Vibration only - no sound"; setSound(null, null); enableVibration(true)
+        })
+        nm().createNotificationChannel(NotificationChannel(CH_SILENT, "Alerts (silent)", NotificationManager.IMPORTANCE_LOW).apply {
+            description = "No sound or vibration - check the screen"; setSound(null, null); enableVibration(false)
         })
     }
 
@@ -94,7 +108,8 @@ class ScanService : Service() {
         .build()
 
     private fun postAlert(text: String) {
-        nm().notify(ALERT_ID, builder(CH_ALERTS).setSmallIcon(android.R.drawable.stat_sys_data_bluetooth)
+        val ch = when (Prefs.alertStyle) { AlertStyle.CHIME -> CH_ALERTS; AlertStyle.VIBRATE -> CH_VIBRATE; AlertStyle.SILENT -> CH_SILENT }
+        nm().notify(ALERT_ID, builder(ch).setSmallIcon(android.R.drawable.stat_sys_data_bluetooth)
             .setContentTitle("Homewatch").setContentText(text).setAutoCancel(true).setContentIntent(openApp()).build())
     }
 
@@ -102,6 +117,8 @@ class ScanService : Service() {
         const val ACTION_STOP = "io.github.sloppytopp.homewatch.STOP"
         private const val CH_ONGOING = "ongoing"
         private const val CH_ALERTS = "alerts"
+        private const val CH_VIBRATE = "alerts_vibrate"
+        private const val CH_SILENT = "alerts_silent"
         private const val ONGOING_ID = 1
         private const val ALERT_ID = 2
     }

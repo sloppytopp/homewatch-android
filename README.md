@@ -5,11 +5,14 @@ using only the phone's own Bluetooth radio. **No account, no cloud, no analytics
 
 ![dark, low-glare main screen](docs/screenshot.png)
 
-## Status: v0.1 (early)
-- [x] Dark, low-glare UI (true black, muted colors; every status is word + icon + color)
-- [x] Bluetooth LE scanner as a foreground service, soft chime on alerts (never a voice)
-- [x] Remote ID parser + tracker classifier, unit-tested (19 tests, same packet fixtures as the Linux tool)
-- [ ] Wi-Fi scanning (Remote ID beacons, camera-like networks), proximity radar, drone map, home-location setup, event history, beep log
+## Status: v0.2
+- [x] Dark, low-glare UI (true black, muted colors; every status is word + icon + color) and a **night mode** (dim red on black)
+- [x] Bluetooth LE scanner: Remote ID drones, separated Apple Find My / Tile / SmartTag / Chipolo trackers (foreground service, soft chime / vibrate / silent - never a voice)
+- [x] Wi-Fi scanning: Remote ID beacons, drone-like and camera-like networks (name + vendor tables)
+- [x] Proximity radar (rough, honestly labelled) and a drone map with real Remote ID positions vs your home; demo-drone preview
+- [x] Home location: phone GPS, address search (Android's lookup service, checked against GPS), or typed numbers - stored on the phone only
+- [x] On-device history (30 days), "I heard my sensor beep" log and report with a background baseline, delete-all button
+- [x] 28 unit tests (same packet fixtures as the Linux tool)
 - [ ] Optional RTL-SDR support; one-time "Pro" extras. Core detection stays free.
 
 ## Read this first
@@ -18,7 +21,7 @@ using only the phone's own Bluetooth radio. **No account, no cloud, no analytics
 - **Do not interfere with a drone** (shooting at or jamming one is a federal crime). Report it to law enforcement or the FAA.
 - Apple "owner nearby" Find My signals are ignored on purpose: only *separated* trackers, and only when persistent and close, raise an alert.
 - Android 11 and older only deliver Bluetooth scan results while the Location switch is on; Homewatch does not read, save or send location.
-- Some phones kill background apps aggressively; the app links to battery settings. Tested on a TCL 5087Z, Android 11.
+- Some phones kill background apps aggressively; the app links to battery settings. Tested on a TCL 5087Z, Android 11. Wi-Fi scans are throttled by Android (about 4 per 2 minutes) and need the Location switch on.
 
 ## Build
 JDK 17 + Android SDK (platform 35). `./gradlew assembleDebug testDebugUnitTest`, then `adb install -r app/build/outputs/apk/debug/app-debug.apk`.

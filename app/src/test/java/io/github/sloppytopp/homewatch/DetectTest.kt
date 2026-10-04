@@ -118,3 +118,76 @@ class EngineTest {
         assertEquals("A drone signal was detected near the house.", alerts.single { it.first == "drone" }.second)
     }
 }
+
+
+class WifiTest {
+    private var t = 5_000_000L
+    private fun engine(alerts: MutableList<String> = mutableListOf()) =
+        Engine({ t }, { d, _ -> alerts += d }).also { it.running = true; it.wifiEnabled = true }
+
+    private val ridIe = byteArrayOf(0x0D, 7) + pack(basicMsg("WIFIDRONE9"), locMsg(10.0, 20.0), sysMsg(11.0, 21.0))
+
+    @Test fun remoteIdBeaconIsDroneClaim() {
+        val alerts = mutableListOf<String>()
+        val e = engine(alerts)
+        e.onWifiScan(listOf(WifiObs("de:ad:be:ef:00:01", "", -60, listOf(ridIe))))
+        val s = e.snapshot()
+        assertEquals(Level.ALERT, s.drone.level)
+        assertTrue(s.drone.message.contains("CLAIMS"))
+        assertEquals("WIFIDRONE9", s.fixes.single().id)
+        assertTrue(s.events.none { it.msg.contains("11.0000") || it.msg.contains("21.0000") }) // operator never logged
+        assertEquals(listOf("drone"), alerts)
+    }
+    @Test fun droneSsidAndCameraSsid() {
+        val e = engine()
+        e.onWifiScan(listOf(WifiObs("aa:bb:cc:00:00:01", "DJI-MAVIC3-ABC", -60), WifiObs("02:11:22:33:44:55", "HDWifiCam_8F2A", -40)))
+        val s = e.snapshot()
+        assertEquals(Level.ALERT, s.drone.level)
+        assertEquals(Level.ALERT, s.camera.level) // -40 dBm = very close
+        assertTrue(s.camera.message.contains("VERY CLOSE"))
+    }
+    @Test fun weakCameraIsWatchOnly() {
+        val e = engine()
+        e.onWifiScan(listOf(WifiObs("aa:bb:cc:00:00:02", "Cams", -92)))
+        assertEquals(Level.WATCH, e.snapshot().camera.level)
+    }
+    @Test fun ordinaryNetworksAreOk() {
+        val e = engine()
+        e.onWifiScan(listOf(WifiObs("aa:bb:cc:00:00:03", "HomeWiFi", -50), WifiObs("aa:bb:cc:00:00:04", "Neighbor", -75)))
+        val s = e.snapshot()
+        assertEquals(Level.OK, s.camera.level); assertEquals(Level.OK, s.drone.level)
+        assertEquals(2, s.wifi.size)
+    }
+    @Test fun ouiLookupClearsLocallyAdministeredBit() {
+        WifiClassifier.loadCsv(sequenceOf("2857BE,Zhejiang Dahua Technology,camera"))
+        assertEquals("camera", WifiClassifier.lookup("28:57:be:00:00:01")!!.klass)
+        assertEquals("camera", WifiClassifier.lookup("2a:57:be:00:00:01")!!.klass) // virtual AP of the same maker
+        assertNull(WifiClassifier.lookup("10:5a:95:39:ef:88"))
+        WifiClassifier.loadCsv(emptySequence())
+    }
+    @Test fun staleWifiScanGoesQuiet() {
+        val e = engine()
+        e.onWifiScan(listOf(WifiObs("aa:bb:cc:00:00:02", "Cams", -92)))
+        t += 200_000
+        assertEquals(Level.OFF, e.snapshot().camera.level)
+    }
+}
+
+class ReportAndGeoTest {
+    @Test fun beepWithNothingNearby() {
+        val r = Report.build(listOf(1_000_000L), emptyList(), 5, 2_000_000L)
+        assertTrue(r.any { it.contains("0 of 1 beeps") }); assertTrue(r.any { it.contains("likely cause") })
+    }
+    @Test fun beepNearDetectionAndBaseline() {
+        val ev = listOf(EventRow(1_100_000L, "tracker", Level.WATCH, "Tile nearby"))
+        val r = Report.build(listOf(1_000_000L), ev, 5, 2_000_000L)
+        assertTrue(r.any { it.contains("1 of 1 beeps") }); assertTrue(r.any { it.contains("Background") })
+    }
+    @Test fun geoDistanceAndBearing() {
+        val d = Geo.distanceM(40.0018, -100.0, 40.0, -100.0)
+        assertEquals(200.0, d, 1.5)
+        assertEquals("N", Geo.compass(Geo.bearingDeg(40.0018, -100.0, 40.0, -100.0)))
+        assertEquals("E", Geo.compass(Geo.bearingDeg(40.0, -99.998, 40.0, -100.0)))
+        assertTrue(Geo.radarFraction(2.0) < 0.33 && Geo.radarFraction(12.0) in 0.33..0.66 && Geo.radarFraction(100.0) > 0.9)
+    }
+}
