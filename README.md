@@ -5,7 +5,7 @@ using only the phone's own Bluetooth radio. **No account, no cloud, no analytics
 
 ![dark, low-glare main screen](docs/screenshot.png)
 
-## Status: v0.3
+## Status: v0.5
 - [x] Dark, low-glare UI (true black, muted colors; every status is word + icon + color) and a **night mode** (dim red on black)
 - [x] Bluetooth LE scanner: Remote ID drones, separated Apple Find My / Tile / SmartTag / Chipolo trackers (foreground service, soft chime / vibrate / silent - never a voice)
 - [x] Wi-Fi scanning: Remote ID beacons, drone-like and camera-like networks (name + vendor tables)
@@ -15,10 +15,11 @@ using only the phone's own Bluetooth radio. **No account, no cloud, no analytics
 - [x] **Nearby** tab: every Wi-Fi network and (optionally) every Bluetooth device in a list with signal bars; tap a network to mark it yours
 - [x] **Tap-to-find**: tap a flagged tile or the alert notification -> hot/cold meter, warmer/colder arrow, turn-in-place compass sweep (trackers), GPS + compass arrow with distance (drones that broadcast a position), Wi-Fi source meter
 - [x] **"This is mine"** for your own trackers (they stop flagging and show green), and a real compass dial (smoothed heading, calibration hint) in the finders
+- [x] **Survey walk + exports**: log Wi-Fi/tracker sightings with GPS while you walk, see a local map with rough source positions (refuses to guess if you didn't really move), save a **KML** for Google Earth or a **WiGLE-format CSV** - exports are local files only, nothing uploads; Wi-Fi detail dialog copies a MAC and opens wigle.net so you can check how long a network has been around
 - [x] **Room sweeps**: sweep each room for 45 s to build a baseline, re-sweep to spot NEW devices, and see which room a device is probably in (no GPS)
 - [x] **Discreet mode**: generic notifications hidden on the lock screen, hidden from recents/screenshots, optional PIN lock, launcher name+icon disguise (Notes / Weather), one-tap quick exit
 - [x] "Is it working?" feedback: breathing dot, live counts and scan ages, plain-language banner, guided 30-second sweep, first-run welcome, night switch on every screen
-- [x] 40 unit tests (same packet fixtures as the Linux tool)
+- [x] 47 unit tests (same packet fixtures as the Linux tool)
 - [ ] Optional RTL-SDR support; one-time "Pro" extras. Core detection stays free.
 
 ## Read this first

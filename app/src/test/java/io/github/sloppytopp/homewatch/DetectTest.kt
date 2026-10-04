@@ -292,3 +292,56 @@ class RoomsTest {
         assertNull(RoomBook.likelyRoom("ble:x", latest)!!.marginDb)
     }
 }
+
+
+class SurveyExportTest {
+    // walk east along a street; the source is a few metres north of the 3rd stop and loudest there
+    private fun pts(): List<SurveyPoint> = listOf(
+        SurveyPoint(1_000, "wifi", "wifi:aa:bb:cc:dd:ee:ff", "Cam & Co", -85, 40.00000, -100.00060, 5f, "[WPA2-PSK-CCMP][ESS]", 2437, "Hikvision", "camera"),
+        SurveyPoint(2_000, "wifi", "wifi:aa:bb:cc:dd:ee:ff", "Cam & Co", -70, 40.00000, -100.00030, 5f, "[WPA2-PSK-CCMP][ESS]", 2437, "Hikvision", "camera"),
+        SurveyPoint(3_000, "wifi", "wifi:aa:bb:cc:dd:ee:ff", "Cam & Co", -50, 40.00000, -100.00000, 5f, "[WPA2-PSK-CCMP][ESS]", 2437, "Hikvision", "camera"),
+        SurveyPoint(4_000, "wifi", "wifi:aa:bb:cc:dd:ee:ff", "Cam & Co", -72, 40.00000, -99.99970, 5f, "[WPA2-PSK-CCMP][ESS]", 2437, "Hikvision", "camera"),
+    )
+
+    @Test fun estimateLandsNearLoudestStop() {
+        val e = Survey.estimate(pts()).single()
+        assertEquals(-100.0, e.lon, 0.0002)           // within ~15 m of the loudest stop
+        assertTrue(e.radiusM >= 5.0)
+        assertEquals(4, e.samples)
+    }
+    @Test fun noMovementMeansNoEstimate() {
+        val still = (1..5).map { SurveyPoint(it * 1000L, "wifi", "wifi:x", "X", -60, 40.0, -100.0, 5f) }
+        assertTrue(Survey.estimate(still).isEmpty())
+    }
+    @Test fun gpsJitterIsNotAWalk() {
+        // phone standing still: fixes wander a few metres (0.00004 deg ~ 4 m) with 7 m accuracy
+        val jitter = listOf(0.0, 0.00003, -0.00002, 0.00004, -0.00003).mapIndexed { i, d ->
+            SurveyPoint(i * 1000L, "wifi", "wifi:x", "X", -60 + i, 40.0 + d, -100.0 + d, 7f)
+        }
+        assertTrue(Survey.estimate(jitter).isEmpty())
+    }
+    @Test fun clusteredEstimatesAreFlagged() {
+        fun e(k: String, la: Double, lo: Double) = Estimate(k, "wifi", k, la, lo, 10.0, 5, -60, "", "other", "")
+        assertTrue(Survey.clustered(listOf(e("a", 40.0, -100.0), e("b", 40.00005, -100.00005), e("c", 40.0001, -100.0))))
+        assertFalse(Survey.clustered(listOf(e("a", 40.0, -100.0), e("b", 40.001, -100.0), e("c", 40.0, -100.001))))
+        assertFalse(Survey.clustered(listOf(e("a", 40.0, -100.0))))
+    }
+    @Test fun kmlEscapesAndHasPins() {
+        val kml = Export.kml(40.0 to -100.0, pts(), Survey.estimate(pts()), 0L)
+        assertTrue(kml.contains("Cam &amp; Co"))
+        assertTrue(kml.contains("<name>Home</name>"))
+        assertTrue(kml.contains("<LineString>"))
+        assertTrue(kml.contains("#red"))
+    }
+    @Test fun wigleCsvFormat() {
+        val csv = Export.wigleCsv(pts(), "0.4", "TCL 5087Z", "11", "dev", "TCL").lines()
+        assertTrue(csv[0].startsWith("WigleWifi-1.4,appRelease=0.4"))
+        assertEquals("MAC,SSID,AuthMode,FirstSeen,Channel,RSSI,CurrentLatitude,CurrentLongitude,AltitudeMeters,AccuracyMeters,Type", csv[1])
+        assertTrue(csv[2].startsWith("aa:bb:cc:dd:ee:ff,Cam & Co,[WPA2-PSK-CCMP][ESS],1970-01-01 00:00:01,6,-85,40.0,-100.0006,0,5.0,WIFI"))
+        assertEquals(1, Export.channel(2412)); assertEquals(11, Export.channel(2462)); assertEquals(14, Export.channel(2484)); assertEquals(36, Export.channel(5180))
+    }
+    @Test fun csvQuotesCommas() {
+        val p = SurveyPoint(0, "wifi", "wifi:aa", "My, \"net\"", -60, 1.0, 2.0, 3f)
+        assertTrue(Export.wigleCsv(listOf(p), "x", "m", "r", "d", "b").contains("\"My, \"\"net\"\"\""))
+    }
+}

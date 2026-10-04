@@ -32,6 +32,12 @@ object Monitor {
     /** Ask for Wi-Fi scans as often as Android allows (room sweeps, hunts). */
     var fastWifi by mutableStateOf(false)
 
+    /** Survey walk: log every sighting together with the phone's GPS position. */
+    var surveying by mutableStateOf(false)
+    var surveyCount by mutableStateOf(0)
+    var surveyNote by mutableStateOf<String?>(null)
+    var lastLoc by mutableStateOf<android.location.Location?>(null)
+
     /** True while the PIN screen is showing. */
     var locked by mutableStateOf(false)
 

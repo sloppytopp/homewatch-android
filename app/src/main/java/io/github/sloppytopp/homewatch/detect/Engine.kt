@@ -116,7 +116,7 @@ class Engine(
         for (o in obs) {
             val klass = WifiClassifier.klassOf(o)
             val vendor = WifiClassifier.lookup(o.bssid)?.vendor ?: ""
-            val row = WifiRow(o.ssid.ifEmpty { "(hidden)" }, o.bssid, o.level, vendor, klass)
+            val row = WifiRow(o.ssid.ifEmpty { "(hidden)" }, o.bssid, o.level, vendor, klass, o.caps, o.freq)
             rows += row
             var ridFound = false
             for (d in o.ridData) {

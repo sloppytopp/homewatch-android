@@ -7,6 +7,7 @@ import android.database.sqlite.SQLiteOpenHelper
 import io.github.sloppytopp.homewatch.detect.EventRow
 import io.github.sloppytopp.homewatch.detect.Level
 import io.github.sloppytopp.homewatch.detect.RoomItem
+import io.github.sloppytopp.homewatch.detect.SurveyPoint
 import io.github.sloppytopp.homewatch.detect.RoomScan
 
 /** On-device history. Events never contain operator coordinates; everything older than 30 days is deleted. */
@@ -15,17 +16,47 @@ object Store {
     private const val KEEP_DAYS = 30
 
     fun init(ctx: Context) {
-        helper = object : SQLiteOpenHelper(ctx, "homewatch.db", null, 2) {
+        helper = object : SQLiteOpenHelper(ctx, "homewatch.db", null, 3) {
             override fun onCreate(db: SQLiteDatabase) {
                 db.execSQL("CREATE TABLE events(id INTEGER PRIMARY KEY, ts INTEGER, domain TEXT, level TEXT, msg TEXT)")
                 db.execSQL("CREATE TABLE beeps(id INTEGER PRIMARY KEY, ts INTEGER)")
                 db.execSQL("CREATE INDEX ev_ts ON events(ts)")
-                createRoomTables(db)
+                createRoomTables(db); createSurveyTable(db)
             }
-            override fun onUpgrade(db: SQLiteDatabase, o: Int, n: Int) { if (o < 2) createRoomTables(db) }
+            override fun onUpgrade(db: SQLiteDatabase, o: Int, n: Int) { if (o < 2) createRoomTables(db); if (o < 3) createSurveyTable(db) }
         }
         prune()
     }
+
+    private fun createSurveyTable(db: SQLiteDatabase) {
+        db.execSQL("CREATE TABLE IF NOT EXISTS survey(ts INTEGER, kind TEXT, key TEXT, label TEXT, rssi INTEGER, lat REAL, lon REAL, acc REAL, caps TEXT, freq INTEGER, vendor TEXT, klass TEXT)")
+    }
+
+    @Synchronized fun addSurvey(points: List<SurveyPoint>) {
+        if (points.isEmpty()) return
+        val db = helper.writableDatabase
+        db.beginTransaction()
+        try {
+            points.forEach { p -> db.insert("survey", null, ContentValues().apply {
+                put("ts", p.ts); put("kind", p.kind); put("key", p.key); put("label", p.label); put("rssi", p.rssi)
+                put("lat", p.lat); put("lon", p.lon); put("acc", p.acc.toDouble()); put("caps", p.caps); put("freq", p.freq); put("vendor", p.vendor); put("klass", p.klass)
+            }) }
+            db.setTransactionSuccessful()
+        } finally { db.endTransaction() }
+    }
+
+    @Synchronized fun survey(): List<SurveyPoint> {
+        val out = ArrayList<SurveyPoint>()
+        helper.readableDatabase.rawQuery("SELECT ts,kind,key,label,rssi,lat,lon,acc,caps,freq,vendor,klass FROM survey ORDER BY ts", null).use {
+            while (it.moveToNext()) out += SurveyPoint(it.getLong(0), it.getString(1), it.getString(2), it.getString(3), it.getInt(4), it.getDouble(5), it.getDouble(6),
+                it.getFloat(7), it.getString(8) ?: "", it.getInt(9), it.getString(10) ?: "", it.getString(11) ?: "")
+        }
+        return out
+    }
+
+    @Synchronized fun surveyCount(): Int = helper.readableDatabase.rawQuery("SELECT COUNT(*) FROM survey", null).use { if (it.moveToFirst()) it.getInt(0) else 0 }
+
+    @Synchronized fun clearSurvey() { helper.writableDatabase.delete("survey", null, null) }
 
     private fun createRoomTables(db: SQLiteDatabase) {
         db.execSQL("CREATE TABLE IF NOT EXISTS room_scan(id INTEGER PRIMARY KEY, room TEXT, ts INTEGER)")
@@ -102,6 +133,7 @@ object Store {
         val cutoff = System.currentTimeMillis() - KEEP_DAYS * 86_400_000L
         helper.writableDatabase.delete("events", "ts<?", arrayOf("$cutoff"))
         helper.writableDatabase.delete("beeps", "ts<?", arrayOf("$cutoff"))
+        helper.writableDatabase.delete("survey", "ts<?", arrayOf("$cutoff"))
     }
 
     @Synchronized fun clearAll() {
@@ -109,5 +141,6 @@ object Store {
         helper.writableDatabase.delete("beeps", null, null)
         helper.writableDatabase.delete("room_item", null, null)
         helper.writableDatabase.delete("room_scan", null, null)
+        helper.writableDatabase.delete("survey", null, null)
     }
 }

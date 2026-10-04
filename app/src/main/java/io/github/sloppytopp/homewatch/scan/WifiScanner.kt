@@ -69,6 +69,6 @@ class WifiScanner(private val ctx: Context) {
                 }
             } catch (_: Exception) {}
         }
-        return WifiObs(r.BSSID ?: "", r.SSID ?: "", r.level, rid)
+        return WifiObs(r.BSSID ?: "", r.SSID ?: "", r.level, rid, r.capabilities ?: "", r.frequency)
     }
 }

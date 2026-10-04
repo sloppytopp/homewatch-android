@@ -70,6 +70,7 @@ import io.github.sloppytopp.homewatch.ui.Level
 import io.github.sloppytopp.homewatch.ui.RadarView
 import io.github.sloppytopp.homewatch.ui.RoomsScreen
 import io.github.sloppytopp.homewatch.ui.SettingsScreen
+import io.github.sloppytopp.homewatch.ui.SurveyCard
 import io.github.sloppytopp.homewatch.ui.StatusTile
 import io.github.sloppytopp.homewatch.ui.UiColors
 import io.github.sloppytopp.homewatch.detect.Snapshot
@@ -160,7 +161,7 @@ private fun Root() {
                 0 -> StatusScreen()
                 1 -> NearbyScreen()
                 2 -> RoomsScreen()
-                3 -> { RadarView(Monitor.snapshot); Text("Drone map", color = UiColors.text, fontSize = 16.sp); DroneMapView(Monitor.snapshot) }
+                3 -> { RadarView(Monitor.snapshot); Text("Drone map", color = UiColors.text, fontSize = 16.sp); DroneMapView(Monitor.snapshot); SurveyCard() }
                 4 -> HistoryScreen()
                 else -> SettingsScreen()
             }

@@ -13,7 +13,12 @@ import android.os.Handler
 import android.os.IBinder
 import android.os.Looper
 import io.github.sloppytopp.homewatch.MainActivity
+import android.location.Location
+import android.location.LocationListener
+import android.location.LocationManager
 import io.github.sloppytopp.homewatch.data.AlertStyle
+import io.github.sloppytopp.homewatch.data.Store
+import io.github.sloppytopp.homewatch.detect.SurveyPoint
 import io.github.sloppytopp.homewatch.data.Prefs
 import io.github.sloppytopp.homewatch.detect.Level
 
@@ -23,10 +28,43 @@ class ScanService : Service() {
     private var scanner: BleScanner? = null
     private var wifi: WifiScanner? = null
     private var wifiN = 0
+    private var locListener: LocationListener? = null
+    private var lastWifiLogged = 0L
+
+    @android.annotation.SuppressLint("MissingPermission")
+    private fun syncSurvey() {
+        val lm = getSystemService(Context.LOCATION_SERVICE) as LocationManager
+        if (Monitor.surveying && locListener == null) {
+            val l = LocationListener { loc -> Monitor.lastLoc = loc }
+            try {
+                val p = if (lm.isProviderEnabled(LocationManager.GPS_PROVIDER)) LocationManager.GPS_PROVIDER else LocationManager.NETWORK_PROVIDER
+                lm.requestLocationUpdates(p, 1000L, 0f, l); locListener = l; Monitor.surveyNote = "Waiting for a GPS fix..."
+            } catch (e: Exception) { Monitor.surveying = false; Monitor.surveyNote = "Couldn't use location (permission or Location switch off)." }
+        } else if (!Monitor.surveying && locListener != null) {
+            lm.removeUpdates(locListener!!); locListener = null
+        }
+        if (locListener == null) return
+        val loc: Location = Monitor.lastLoc ?: return
+        val now = System.currentTimeMillis()
+        if (now - loc.time > 15_000) { Monitor.surveyNote = "GPS position is stale - step outside or near a window."; return }
+        Monitor.surveyNote = null
+        val s = Monitor.snapshot
+        val pts = ArrayList<SurveyPoint>()
+        if (s.wifiAt != 0L && s.wifiAt != lastWifiLogged) {
+            lastWifiLogged = s.wifiAt
+            s.wifi.forEach { pts += SurveyPoint(now, "wifi", "wifi:${it.bssid}", it.ssid, it.level, loc.latitude, loc.longitude, loc.accuracy, it.caps, it.freq, it.vendor, it.klass) }
+        }
+        s.trackers.forEach { pts += SurveyPoint(now, "tracker", "ble:${it.addr}", it.label, it.rssi, loc.latitude, loc.longitude, loc.accuracy) }
+        if (Monitor.inspecting) s.inspect.filter { it.name.isNotEmpty() || it.company.isNotEmpty() }.forEach {
+            pts += SurveyPoint(now, "ble", "ble:${it.addr}", it.name.ifEmpty { it.company }, it.rssi, loc.latitude, loc.longitude, loc.accuracy)
+        }
+        if (pts.isNotEmpty()) { Store.addSurvey(pts); Monitor.surveyCount += pts.size }
+    }
     private val tick = object : Runnable {
         override fun run() {
             if (wifiN++ % (if (Monitor.hunt != null || Monitor.fastWifi) 5 else 10) == 0) wifi?.poke()   // ~30 s, or ~15 s while hunting
             Monitor.refresh()
+            runCatching { syncSurvey() }
             val s = Monitor.snapshot
             nm().notify(ONGOING_ID, ongoing(statusLine(s.drone.level, s.tracker.level)))
             handler.postDelayed(this, 3000)
@@ -62,6 +100,7 @@ class ScanService : Service() {
         handler.removeCallbacks(tick)
         scanner?.stop(); scanner = null
         wifi?.stop(); wifi = null
+        Monitor.surveying = false; runCatching { syncSurvey() }
         Monitor.engine.running = false
         Monitor.refresh()
         stopForeground(STOP_FOREGROUND_REMOVE)

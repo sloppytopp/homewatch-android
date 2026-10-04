@@ -1,8 +1,8 @@
 package io.github.sloppytopp.homewatch.detect
 
 /** One Wi-Fi network as seen by a scan. [ridData] = vendor-IE payloads (after the FA:0B:BC OUI) carrying Remote ID. */
-data class WifiObs(val bssid: String, val ssid: String, val level: Int, val ridData: List<ByteArray> = emptyList())
-data class WifiRow(val ssid: String, val bssid: String, val level: Int, val vendor: String, val klass: String)
+data class WifiObs(val bssid: String, val ssid: String, val level: Int, val ridData: List<ByteArray> = emptyList(), val caps: String = "", val freq: Int = 0)
+data class WifiRow(val ssid: String, val bssid: String, val level: Int, val vendor: String, val klass: String, val caps: String = "", val freq: Int = 0)
 data class OuiHit(val vendor: String, val klass: String)
 
 object WifiClassifier {

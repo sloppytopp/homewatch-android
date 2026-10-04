@@ -69,6 +69,7 @@ fun NearbyScreen() {
     val s = Monitor.snapshot
     val now = rememberNow()
     var finding by remember { mutableStateOf<Pair<String, String>?>(null) }
+    var wifiDetail by remember { mutableStateOf<io.github.sloppytopp.homewatch.detect.WifiRow?>(null) }
     DisposableEffect(Unit) { onDispose { Monitor.setInspect(ctx, false) } } // unfiltered scan only while this screen is open
 
     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -76,7 +77,7 @@ fun NearbyScreen() {
         if (!s.running) Text("Start scanning on the Status tab to fill these lists.", color = UiColors.warn, fontSize = 13.sp)
 
         Text("Wi-Fi networks (${s.wifi.size})" + if (s.wifiAt > 0) " - scanned ${ago(now - s.wifiAt)} ago" else "", color = UiColors.text, fontSize = 15.sp)
-        Text("Tap a network to mark it as yours (it turns green on the radar). Android only allows a Wi-Fi scan every ~30 s.", color = UiColors.faint, fontSize = 11.sp)
+        Text("Tap a network for details: mark it as yours, or look it up on WiGLE. Android only allows a Wi-Fi scan every ~30 s.", color = UiColors.faint, fontSize = 11.sp)
         if (s.wifi.isEmpty()) Text(s.camera.message.takeIf { s.camera.level == io.github.sloppytopp.homewatch.detect.Level.OFF } ?: "No networks yet...", color = UiColors.dim, fontSize = 12.sp)
         s.wifi.forEach { w ->
             val mine = w.ssid in Prefs.mySsids
@@ -84,7 +85,7 @@ fun NearbyScreen() {
                 signalBars(w.level), w.ssid, "${w.bssid}${if (w.vendor.isNotEmpty()) " · ${w.vendor}" else ""}", w.level,
                 chip = when { mine -> "YOURS"; w.klass == "camera" -> "CAMERA-LIKE"; w.klass == "drone" -> "DRONE-LIKE"; else -> null },
                 chipColor = if (mine) UiColors.good else UiColors.alert,
-                onClick = { if (mine) Prefs.forgetSsid(w.ssid) else Prefs.learnSsid(w.ssid) },
+                onClick = { wifiDetail = w },
             )
         }
 
@@ -114,6 +115,30 @@ fun NearbyScreen() {
     }
 
     finding?.let { (addr, label) -> Finder(addr, label) { finding = null } }
+    wifiDetail?.let { w ->
+        val mine = w.ssid in Prefs.mySsids
+        AlertDialog(
+            containerColor = UiColors.dialogBg, titleContentColor = UiColors.text, textContentColor = UiColors.text,
+            onDismissRequest = { wifiDetail = null }, title = { Text(w.ssid) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.verticalScroll(rememberScrollState())) {
+                    Text("MAC (BSSID): ${w.bssid}\nMaker: ${w.vendor.ifEmpty { "unknown" }}\nSignal: ${w.level} dBm\nSecurity: ${w.caps.ifEmpty { "unknown" }}" +
+                        (if (w.klass == "camera" || w.klass == "drone") "\nLooks like a ${w.klass} (by name or maker)" else ""), fontSize = 13.sp)
+                    Text("Is it new here? WiGLE is a public database of Wi-Fi networks. A network that has been at this spot for years is probably a long-standing neighbor; one WiGLE has never seen near you is worth a closer look. " +
+                        "Tapping below copies the MAC and opens wigle.net in your browser - Homewatch itself sends nothing.", fontSize = 12.sp)
+                    TextButton(onClick = {
+                        val cm = ctx.getSystemService(Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
+                        cm.setPrimaryClip(android.content.ClipData.newPlainText("MAC", w.bssid))
+                        try { ctx.startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse("https://wigle.net/")).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)) } catch (_: Exception) {}
+                    }) { Text("Copy the MAC and open WiGLE") }
+                    TextButton(onClick = { if (mine) Prefs.forgetSsid(w.ssid) else Prefs.learnSsid(w.ssid); wifiDetail = null }) {
+                        Text(if (mine) "Not mine - stop showing it as yours" else "This is my network")
+                    }
+                }
+            },
+            confirmButton = { TextButton(onClick = { wifiDetail = null }) { Text("Close") } },
+        )
+    }
 }
 
 /** Hot/cold finder with a warmer/colder trend and an optional turn-in-place compass sweep. */
