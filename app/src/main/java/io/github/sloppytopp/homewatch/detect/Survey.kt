@@ -108,7 +108,14 @@ object Export {
         append("</Folder>\n</Document></kml>\n")
     }
 
-    private fun csv(s: String) = if (s.any { it == ',' || it == '"' || it == '\n' }) "\"" + s.replace("\"", "\"\"") + "\"" else s
+    /**
+     * Network names come from strangers' radios. A name like =HYPERLINK(...) would run as a formula when the CSV is opened in
+     * Excel/Sheets (CSV injection), so a leading = + - @ tab or CR gets a single quote in front, then normal CSV quoting.
+     */
+    private fun csv(raw: String): String {
+        val s = if (raw.isNotEmpty() && raw[0] in "=+-@\t\r") "'$raw" else raw
+        return if (s.any { it == ',' || it == '"' || it == '\n' || it == '\r' }) "\"" + s.replace("\"", "\"\"") + "\"" else s
+    }
 
     /** WiGLE's "WigleWifi-1.4" upload format. Exporting is local; uploading is the user's own choice (WiGLE is public). */
     fun wigleCsv(points: List<SurveyPoint>, appRelease: String, model: String, release: String, device: String, brand: String): String = buildString {

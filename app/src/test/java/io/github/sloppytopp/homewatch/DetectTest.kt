@@ -340,6 +340,15 @@ class SurveyExportTest {
         assertTrue(csv[2].startsWith("aa:bb:cc:dd:ee:ff,Cam & Co,[WPA2-PSK-CCMP][ESS],1970-01-01 00:00:01,6,-85,40.0,-100.0006,0,5.0,WIFI"))
         assertEquals(1, Export.channel(2412)); assertEquals(11, Export.channel(2462)); assertEquals(14, Export.channel(2484)); assertEquals(36, Export.channel(5180))
     }
+    @Test fun csvInjectionIsNeutralised() {
+        for (evil in listOf("=HYPERLINK(\"http://x\")", "+1+1", "-2+3", "@SUM(A1)", "\t=1")) {
+            val line = Export.wigleCsv(listOf(SurveyPoint(0, "wifi", "wifi:aa", evil, -60, 1.0, 2.0, 3f)), "x", "m", "r", "d", "b").lines()[2]
+            val ssid = line.substringAfter("aa,").let { if (it.startsWith("\"")) it.drop(1) else it }
+            assertTrue("formula start must be defused: $evil -> $ssid", ssid.startsWith("'"))
+        }
+        // ordinary names stay untouched
+        assertTrue(Export.wigleCsv(listOf(SurveyPoint(0, "wifi", "wifi:aa", "HomeWiFi", -60, 1.0, 2.0, 3f)), "x", "m", "r", "d", "b").contains("aa,HomeWiFi,"))
+    }
     @Test fun csvQuotesCommas() {
         val p = SurveyPoint(0, "wifi", "wifi:aa", "My, \"net\"", -60, 1.0, 2.0, 3f)
         assertTrue(Export.wigleCsv(listOf(p), "x", "m", "r", "d", "b").contains("\"My, \"\"net\"\"\""))
