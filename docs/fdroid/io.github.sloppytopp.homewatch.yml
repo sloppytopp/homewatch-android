@@ -12,8 +12,8 @@ AutoName: Homewatch
 
 RepoType: git
 Repo: https://github.com/sloppytopp/homewatch-android
-
-Binaries: https://github.com/sloppytopp/homewatch-android/releases/download/v%v/homewatch-%v.apk
+Binaries: 
+  https://github.com/sloppytopp/homewatch-android/releases/download/v%v/homewatch-%v.apk
 
 Builds:
   - versionName: 0.6.0
