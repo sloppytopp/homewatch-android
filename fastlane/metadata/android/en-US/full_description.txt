@@ -1,4 +1,4 @@
-Homewatch helps you check whether anything nearby is tracking or watching you - using only your phone's own Bluetooth and Wi-Fi radios. No account, no cloud, no ads, no analytics. It cannot even connect to the internet.
+N0RMA helps you check whether anything nearby is tracking or watching you - using only your phone's own Bluetooth and Wi-Fi radios. No account, no cloud, no ads, no analytics. It cannot even connect to the internet.
 
 WHAT IT DOES
 - Finds Bluetooth trackers that are separated from their owner (Apple Find My / AirTag-style, Tile, Samsung SmartTag, Chipolo) and ignores normal "owner nearby" signals
@@ -14,7 +14,7 @@ WHAT IT DOES
 - "Try it with sample data" shows every screen working before you trust it with anything real
 
 HONEST LIMITS
-A quiet screen is NOT a guarantee of safety. A phone cannot see drones without Remote ID, cameras that only record to an SD card, cellular/GPS trackers, or most hidden devices. Signal-strength distance and direction are rough estimates, and walls bend them. Android limits how often Wi-Fi can be scanned and needs the Location switch on (Homewatch does not read, save or send your location). Some phones stop background apps to save battery.
+A quiet screen is NOT a guarantee of safety. A phone cannot see drones without Remote ID, cameras that only record to an SD card, cellular/GPS trackers, or most hidden devices. Signal-strength distance and direction are rough estimates, and walls bend them. Android limits how often Wi-Fi can be scanned and needs the Location switch on (N0RMA does not read, save or send your location). Some phones stop background apps to save battery.
 
 PRIVACY
 Everything stays on the phone. There is no internet permission. History is deleted after 30 days, and you can delete everything with one tap. Drone operator positions are shown live and never saved. The optional address search for your home uses Android's own lookup service; GPS and typed coordinates send nothing.
@@ -22,4 +22,4 @@ Everything stays on the phone. There is no internet permission. History is delet
 SAFETY
 If you find something you do not own, leave it where it is, photograph it, and contact local law enforcement. Never shoot at, jam or interfere with a drone. If you feel unsafe (for example because of a stalker or abusive partner), contact local police or a hotline; in the US, the National Domestic Violence Hotline is 1-800-799-7233.
 
-Detect-only: Homewatch never jams, spoofs or transmits. Free and open source (MIT).
+Detect-only: N0RMA never jams, spoofs or transmits. Free and open source (MIT).

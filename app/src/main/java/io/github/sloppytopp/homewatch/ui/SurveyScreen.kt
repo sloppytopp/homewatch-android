@@ -45,7 +45,7 @@ import kotlinx.coroutines.delay
 private fun write(ctx: Context, uri: Uri, text: String): Boolean =
     try { ctx.contentResolver.openOutputStream(uri)?.use { it.write(text.toByteArray()) } != null } catch (e: Exception) { false }
 
-/** Walk around, let Homewatch log what it hears and where, see rough source positions, export to Google Earth / WiGLE. */
+/** Walk around, let N0RMA log what it hears and where, see rough source positions, export to Google Earth / WiGLE. */
 @Composable
 fun SurveyCard() {
     val ctx = LocalContext.current
@@ -71,7 +71,7 @@ fun SurveyCard() {
 
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text("Survey walk", color = UiColors.text, fontSize = 16.sp)
-        Text("Walk around your property or street while this is on. Homewatch logs every Wi-Fi network and tracker it hears together with where you were (GPS), then estimates roughly where each one is. " +
+        Text("Walk around your property or street while this is on. N0RMA logs every Wi-Fi network and tracker it hears together with where you were (GPS), then estimates roughly where each one is. " +
             "Everything stays on this phone until YOU export it.", color = UiColors.dim, fontSize = 12.sp)
         if (!s.running) Text("Start scanning on the Status tab first.", color = UiColors.warn, fontSize = 13.sp)
         Button(
@@ -127,7 +127,7 @@ fun SurveyCard() {
         confirmButton = {
             TextButton(onClick = {
                 wigleWarn = false
-                pending = Export.wigleCsv(points, "Homewatch 0.4", Build.MODEL, Build.VERSION.RELEASE, Build.DEVICE, Build.MANUFACTURER); csvOut.launch("homewatch-wigle.csv")
+                pending = Export.wigleCsv(points, "N0RMA 0.4", Build.MODEL, Build.VERSION.RELEASE, Build.DEVICE, Build.MANUFACTURER); csvOut.launch("homewatch-wigle.csv")
             }) { Text("Save the file") }
         },
         dismissButton = { TextButton(onClick = { wigleWarn = false }) { Text("Cancel") } },

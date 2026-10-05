@@ -145,7 +145,7 @@ private fun Root() {
     Column(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding()) {
         Row(Modifier.fillMaxWidth().padding(start = 16.dp, end = 12.dp, top = 4.dp), verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
             Heartbeat(Monitor.snapshot.running)
-            Text("  Homewatch", color = UiColors.text, fontSize = 20.sp, modifier = Modifier.weight(1f))
+            Text("  N0RMA", color = UiColors.text, fontSize = 20.sp, modifier = Modifier.weight(1f))
             TextButton(onClick = { (ctx0 as? Activity)?.finishAndRemoveTask() }, contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 8.dp)) {
                 Text("✕", color = UiColors.dim, fontSize = 18.sp)
             }
@@ -208,7 +208,7 @@ private fun StatusScreen() {
             verticalArrangement = Arrangement.spacedBy(6.dp),
         ) {
             Text("Welcome - here's how this works", color = UiColors.text, fontSize = 16.sp)
-            Text("1. Tap Start scanning. Homewatch listens for drones, trackers and camera-like Wi-Fi networks around you.\n" +
+            Text("1. Tap Start scanning. N0RMA listens for drones, trackers and camera-like Wi-Fi networks around you.\n" +
                 "2. The banner tells you in plain words if everything is normal. It shows proof it's working: a breathing dot and live counts.\n" +
                 "3. Use Nearby to see every Wi-Fi network and Bluetooth device, and tap one to hunt for it.\n" +
                 "4. Everything stays on this phone. Use the Night switch at the top to dim the screen.", color = UiColors.dim, fontSize = 13.sp)
@@ -240,7 +240,7 @@ private fun StatusScreen() {
     s.error?.let { Text("⚠ $it", color = UiColors.warn, fontSize = 13.sp) }
     if (locOff) {
         Text("Android 11 and older only deliver Bluetooth scan results while the phone's Location switch is on. " +
-            "Homewatch never saves or sends your location - the switch is just how Android gates scanning.", color = UiColors.warn, fontSize = 13.sp)
+            "N0RMA never saves or sends your location - the switch is just how Android gates scanning.", color = UiColors.warn, fontSize = 13.sp)
         TextButton(onClick = { ctx.startActivity(Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS)) }) { Text("Open Location settings") }
     }
 
@@ -270,10 +270,10 @@ private fun StatusScreen() {
         title = { Text("Before we scan") },
         text = {
             Text(
-                "Homewatch listens for Bluetooth and Wi-Fi signals from nearby drones, trackers and camera-like networks, entirely on this phone.\n\n" +
+                "N0RMA listens for Bluetooth and Wi-Fi signals from nearby drones, trackers and camera-like networks, entirely on this phone.\n\n" +
                     (if (Build.VERSION.SDK_INT >= 31) "Android will ask for \"Nearby devices\" - that is Bluetooth scanning" +
                         (if (Build.VERSION.SDK_INT >= 33) " and Wi-Fi scanning.\n\n" else ", and for Location to allow Wi-Fi scanning.\n\n")
-                    else "Android will ask for \"Location\" - on this Android version that is the only way to allow Bluetooth and Wi-Fi scanning. Homewatch does not read, save or send your location.\n\n") +
+                    else "Android will ask for \"Location\" - on this Android version that is the only way to allow Bluetooth and Wi-Fi scanning. N0RMA does not read, save or send your location.\n\n") +
                     "It may also ask to show notifications, so it can chime softly when something is flagged. Nothing is uploaded and there is no account."
             )
         },

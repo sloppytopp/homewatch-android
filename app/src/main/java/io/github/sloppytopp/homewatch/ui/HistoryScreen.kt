@@ -37,7 +37,7 @@ fun HistoryScreen() {
 
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text("Sensor beep log", color = UiColors.text, fontSize = 16.sp)
-        Text("Tap each time your motion sensor beeps. Homewatch then checks whether anything it detects lines up with the beeps - and how often something is nearby anyway.",
+        Text("Tap each time your motion sensor beeps. N0RMA then checks whether anything it detects lines up with the beeps - and how often something is nearby anyway.",
             color = UiColors.dim, fontSize = 12.sp)
         Button(
             onClick = { Store.addBeep(); v++ }, modifier = Modifier.fillMaxWidth(),
@@ -54,11 +54,12 @@ fun HistoryScreen() {
                 val rpt = Evidence.build(System.currentTimeMillis(), Store.events(now - 30 * 86_400_000L, 1500), Follow.analyze(Store.trail()), Store.trail())
                 ctx.startActivity(android.content.Intent.createChooser(
                     android.content.Intent(android.content.Intent.ACTION_SEND).setType("text/plain")
-                        .putExtra(android.content.Intent.EXTRA_SUBJECT, "Homewatch evidence report").putExtra(android.content.Intent.EXTRA_TEXT, rpt), "Share report"))
+                        .putExtra(android.content.Intent.EXTRA_SUBJECT, "N0RMA evidence report").putExtra(android.content.Intent.EXTRA_TEXT, rpt), "Share report"))
             }, modifier = Modifier.fillMaxWidth(),
             colors = ButtonDefaults.buttonColors(containerColor = UiColors.buttonBg, contentColor = UiColors.buttonFg),
         ) { Text("Export evidence report") }
 
+        StalkerCard()
         DigitalSafetyCard()
         FollowCard(remember(v) { Follow.analyze(Store.trail()) })
         Text("Recent events", color = UiColors.text, fontSize = 16.sp)

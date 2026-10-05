@@ -125,7 +125,7 @@ fun NearbyScreen() {
                     Text("MAC (BSSID): ${w.bssid}\nMaker: ${w.vendor.ifEmpty { "unknown" }}\nSignal: ${w.level} dBm\nSecurity: ${w.caps.ifEmpty { "unknown" }}" +
                         (if (w.klass == "camera" || w.klass == "drone") "\nLooks like a ${w.klass} (by name or maker)" else ""), fontSize = 13.sp)
                     Text("Is it new here? WiGLE is a public database of Wi-Fi networks. A network that has been at this spot for years is probably a long-standing neighbor; one WiGLE has never seen near you is worth a closer look. " +
-                        "Tapping below copies the MAC and opens wigle.net in your browser - Homewatch itself sends nothing.", fontSize = 12.sp)
+                        "Tapping below copies the MAC and opens wigle.net in your browser - N0RMA itself sends nothing.", fontSize = 12.sp)
                     TextButton(onClick = {
                         val cm = ctx.getSystemService(Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
                         cm.setPrimaryClip(android.content.ClipData.newPlainText("MAC", w.bssid))

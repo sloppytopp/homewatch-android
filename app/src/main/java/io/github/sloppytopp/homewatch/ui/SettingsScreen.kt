@@ -171,6 +171,6 @@ fun SettingsScreen() {
         Prefs.mySsids.forEach { s -> Row { Text(s, color = UiColors.text, fontSize = 13.sp, modifier = Modifier.weight(1f)); TextButton(onClick = { Prefs.forgetSsid(s) }) { Text("Forget") } } }
 
         TextButton(onClick = { ctx.startActivity(Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS)) }) { Text("Battery settings (allow unrestricted background use)") }
-        Text("Homewatch v0.2 - detect-only. Nothing leaves this phone except the optional address lookup above.", color = UiColors.faint, fontSize = 11.sp)
+        Text("N0RMA v0.2 - detect-only. Nothing leaves this phone except the optional address lookup above.", color = UiColors.faint, fontSize = 11.sp)
     }
 }

@@ -141,3 +141,18 @@ class EvidenceTest {
         assertTrue(e.snapshot().follow.isEmpty())
     }
 }
+
+class StalkerwareTest {
+    @Test fun matchesKnownPackagesOnly() {
+        Stalkerware.loadCsv(sequenceOf("# list version abc1234 (2026-10-03)", "com.thetruth,TheTruthSpy,stalkerware", "com.fone,TheTruthSpy,stalkerware"))
+        val hits = Stalkerware.match(listOf("com.android.chrome", "com.thetruth", "org.fdroid.fdroid"))
+        assertEquals(listOf(StalkerHit("com.thetruth", "TheTruthSpy")), hits)
+        assertTrue(Stalkerware.match(listOf("com.example.safe")).isEmpty())
+    }
+
+    @Test fun reviewListPutsHiddenIconAppsFirst() {
+        val a = ReviewApp("a", "Alpha", listOf("accessibility"), noIcon = false)
+        val b = ReviewApp("b", "Beta", listOf("device admin"), noIcon = true)
+        assertEquals(listOf("b", "a"), Stalkerware.rank(listOf(a, b)).map { it.pkg })
+    }
+}

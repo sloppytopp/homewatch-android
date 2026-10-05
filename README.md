@@ -1,4 +1,4 @@
-# Homewatch for Android
+# N0RMA for Android
 
 **Check whether anything nearby is tracking or watching you - using only your phone's own radios. Nothing leaves your phone.**
 
@@ -31,7 +31,7 @@ Honest answer: tracker detection alone is already well covered.
 - [**AirGuard**](https://github.com/seemoo-lab/AirGuard) (TU Darmstadt, open source) is excellent at tracking *you* over time with AirTags, SmartTags and Google trackers, and Google and Apple ship built-in unknown-tracker alerts. Use them too.
 - Open-source Remote ID scanner apps exist for drones.
 
-Homewatch is not another AirTag finder. It is the **one place** that looks at trackers, drones and camera-like networks together, tells you in plain words what it found, **walks you to it**, checks it **room by room**, and exports a **survey** - in a calm interface made for being used at night, possibly under stress.
+N0RMA is not another AirTag finder. It is the **one place** that looks at trackers, drones and camera-like networks together, tells you in plain words what it found, **walks you to it**, checks it **room by room**, and exports a **survey** - in a calm interface made for being used at night, possibly under stress.
 
 ## Read this first
 - **Not a guarantee of safety.** A quiet screen means "nothing seen by this radio". A phone cannot see drones without Remote ID, cameras that only record to an SD card, cellular/GPS trackers, or most hidden devices.
@@ -41,7 +41,7 @@ Homewatch is not another AirTag finder. It is the **one place** that looks at tr
 - **If you find something you don't own**, leave it in place, photograph it, and contact local law enforcement.
 - **If you feel unsafe** (for example because of a stalker or abusive partner), contact local police or a hotline. In the US: National Domestic Violence Hotline, 1-800-799-7233.
 - **WiGLE is public.** Uploading a survey puts the networks you heard - including your own - and where you walked on a public map. Don't upload surveys made near a home you want to keep private.
-- Android only allows a few Wi-Fi scans per couple of minutes and needs the Location switch on (Homewatch does not read, save or send your location). Some phones stop background apps to save battery; the app links to the battery settings.
+- Android only allows a few Wi-Fi scans per couple of minutes and needs the Location switch on (N0RMA does not read, save or send your location). Some phones stop background apps to save battery; the app links to the battery settings.
 
 ## Download
 Only use the official sources below. Other "APK sites" can host modified copies, which matters for a privacy tool.
@@ -49,7 +49,7 @@ Only use the official sources below. Other "APK sites" can host modified copies,
 | Source | How |
 |---|---|
 | **GitHub Releases** (official) | Download `homewatch-<version>.apk` from the [latest release](../../releases/latest) |
-| **Obtainium** (auto-updates from GitHub) | [Add Homewatch to Obtainium](https://apps.obtainium.imranr.dev/redirect?r=obtainium://add/https://github.com/sloppytopp/homewatch-android) - or in Obtainium tap **Add App** and paste `https://github.com/sloppytopp/homewatch-android` |
+| **Obtainium** (auto-updates from GitHub) | [Add N0RMA to Obtainium](https://apps.obtainium.imranr.dev/redirect?r=obtainium://add/https://github.com/sloppytopp/homewatch-android) - or in Obtainium tap **Add App** and paste `https://github.com/sloppytopp/homewatch-android` |
 | **F-Droid** | [merge request open](https://gitlab.com/fdroid/fdroiddata/-/merge_requests/51294) (under review) |
 
 Requires Android 8+ and a phone with Bluetooth LE. Tested on a TCL 5087Z (Android 11). After installing, tap **Try it with sample data** to see every screen work before trusting it with anything real.

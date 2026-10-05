@@ -71,7 +71,7 @@ fun RoomsScreen() {
 
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text("Room sweeps", color = UiColors.text, fontSize = 20.sp)
-        Text("Walk into a room, tap Sweep, and hold the phone still for 45 seconds. Homewatch remembers every Wi-Fi network and Bluetooth device it hears there. " +
+        Text("Walk into a room, tap Sweep, and hold the phone still for 45 seconds. N0RMA remembers every Wi-Fi network and Bluetooth device it hears there. " +
             "Sweep each room once for a baseline, then again whenever you want to check: anything NEW in a room stands out. " +
             "With two or more rooms swept, it can also tell you which room a device is probably in - without GPS.", color = UiColors.dim, fontSize = 12.sp)
         if (!s.running) Text("Start scanning on the Status tab first.", color = UiColors.warn, fontSize = 13.sp)

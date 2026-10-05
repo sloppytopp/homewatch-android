@@ -28,7 +28,7 @@ object Prefs {
     var discreet by mutableStateOf(false); private set
     var rooms by mutableStateOf<List<String>>(emptyList()); private set
     var hasPin by mutableStateOf(false); private set
-    var launcher by mutableStateOf(0); private set   // 0 Homewatch, 1 Notes, 2 Weather
+    var launcher by mutableStateOf(0); private set   // 0 N0RMA, 1 Notes, 2 Weather
 
     fun init(ctx: Context) {
         sp = ctx.getSharedPreferences("homewatch", Context.MODE_PRIVATE)

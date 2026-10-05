@@ -22,7 +22,7 @@ object Evidence {
     fun build(nowMs: Long, events: List<EventRow>, follow: List<FollowHit>, sights: List<Sight>, tz: TimeZone = TimeZone.getDefault()): String {
         val flagged = events.filter { it.level == Level.WATCH || it.level == Level.ALERT }.sortedBy { it.ts }
         val out = StringBuilder()
-        out.appendLine("HOMEWATCH EVIDENCE REPORT")
+        out.appendLine("N0RMA EVIDENCE REPORT")
         out.appendLine("Generated: ${fmt(nowMs, tz)}")
         out.appendLine()
         out.appendLine("SUMMARY (plain language)")

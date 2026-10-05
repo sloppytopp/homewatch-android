@@ -1,4 +1,4 @@
-# Homewatch for Android - design (draft 1)
+# N0RMA for Android - design (draft 1)
 
 **Goal:** a standalone, detect-only Android app that gives someone an honest answer to "is anything near my home
 tracking or watching me?" using the phone's own Bluetooth and Wi-Fi radios. No account, no cloud, no analytics.

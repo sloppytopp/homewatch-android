@@ -74,8 +74,8 @@ class ScanService : Service() {
     private fun nm() = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
 
     private fun statusLine(d: Level, t: Level) =
-        if (d == Level.ALERT || t == Level.ALERT) "Alert - open Homewatch"
-        else if (d == Level.WATCH || t == Level.WATCH) "Watching something - open Homewatch" else "Scanning - nothing flagged"
+        if (d == Level.ALERT || t == Level.ALERT) "Alert - open N0RMA"
+        else if (d == Level.WATCH || t == Level.WATCH) "Watching something - open N0RMA" else "Scanning - nothing flagged"
 
     override fun onBind(intent: Intent?): IBinder? = null
 
@@ -119,7 +119,7 @@ class ScanService : Service() {
     private fun makeChannels() {
         if (Build.VERSION.SDK_INT < 26) return
         nm().createNotificationChannel(NotificationChannel(CH_ONGOING, "Scanning status", NotificationManager.IMPORTANCE_LOW).apply {
-            description = "Shows that Homewatch is scanning"; setShowBadge(false)
+            description = "Shows that N0RMA is scanning"; setShowBadge(false)
         })
         // Generic channel names for discreet mode (channel names are visible in Android's notification settings).
         nm().createNotificationChannel(NotificationChannel(CH_D_ONGOING, "Background", NotificationManager.IMPORTANCE_LOW).apply { setShowBadge(false) })
@@ -150,7 +150,7 @@ class ScanService : Service() {
 
     private fun ongoing(text: String): Notification = builder(if (Prefs.discreet) CH_D_ONGOING else CH_ONGOING)
         .setSmallIcon(if (Prefs.discreet) android.R.drawable.stat_notify_sync_noanim else android.R.drawable.stat_sys_data_bluetooth)
-        .setContentTitle(if (Prefs.discreet) "Background service" else "Homewatch")
+        .setContentTitle(if (Prefs.discreet) "Background service" else "N0RMA")
         .setContentText(if (Prefs.discreet) "Running" else text)
         .setVisibility(if (Prefs.discreet) Notification.VISIBILITY_SECRET else Notification.VISIBILITY_PRIVATE)
         .setOngoing(true).setContentIntent(openApp())
@@ -167,7 +167,7 @@ class ScanService : Service() {
         }
         nm().notify(ALERT_ID, builder(ch)
             .setSmallIcon(if (d) android.R.drawable.stat_notify_sync_noanim else android.R.drawable.stat_sys_data_bluetooth)
-            .setContentTitle(if (d) "Update" else "Homewatch").setContentText(if (d) "Tap to open" else "$text Tap to find it.")
+            .setContentTitle(if (d) "Update" else "N0RMA").setContentText(if (d) "Tap to open" else "$text Tap to find it.")
             .setVisibility(if (d) Notification.VISIBILITY_SECRET else Notification.VISIBILITY_PRIVATE)
             .setAutoCancel(true).setContentIntent(huntIntent(domain)).build())
     }

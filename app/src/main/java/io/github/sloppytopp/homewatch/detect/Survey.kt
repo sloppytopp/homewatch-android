@@ -88,7 +88,7 @@ object Export {
     fun kml(home: Pair<Double, Double>?, points: List<SurveyPoint>, estimates: List<Estimate>, generatedMs: Long): String = buildString {
         fun style(id: String, abgr: String) = append("<Style id=\"$id\"><IconStyle><color>$abgr</color><scale>1.1</scale><Icon><href>http://maps.google.com/mapfiles/kml/shapes/placemark_circle.png</href></Icon></IconStyle></Style>\n")
         append("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<kml xmlns=\"http://www.opengis.net/kml/2.2\"><Document>\n")
-        append("<name>Homewatch survey ${esc(utc(generatedMs))} UTC</name>\n")
+        append("<name>N0RMA survey ${esc(utc(generatedMs))} UTC</name>\n")
         append("<description>Estimated positions from signal strength while walking. Walls and antennas distort signal strength, so treat every pin as a rough guess (see the radius).</description>\n")
         style("red", "ff4040d0"); style("amber", "ff3aa0d8"); style("blue", "ffc08a58"); style("gray", "ff909090"); style("home", "ffe0a040")
         home?.let { (la, lo) -> append("<Placemark><name>Home</name><styleUrl>#home</styleUrl><Point><coordinates>$lo,$la,0</coordinates></Point></Placemark>\n") }

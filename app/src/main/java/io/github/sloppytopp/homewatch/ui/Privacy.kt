@@ -79,7 +79,7 @@ fun PrivacySection() {
 
         Text("App name and icon on the home screen", color = UiColors.dim, fontSize = 12.sp, modifier = Modifier.padding(top = 4.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-            listOf("Homewatch", "Notes", "Weather").forEachIndexed { i, name ->
+            listOf("N0RMA", "Notes", "Weather").forEachIndexed { i, name ->
                 val on = Prefs.launcher == i
                 Button(
                     onClick = { Prefs.saveLauncher(ctx, i); msg = "Done. Your launcher may take a few seconds to show the new name and icon." },
@@ -95,7 +95,7 @@ fun PrivacySection() {
                 Text(if (Prefs.hasPin) "Remove PIN" else "Set a PIN")
             }
         }
-        Text("The \"✕\" at the top of every screen closes Homewatch and removes it from recent apps in one tap.", color = UiColors.dim, fontSize = 12.sp)
+        Text("The \"✕\" at the top of every screen closes N0RMA and removes it from recent apps in one tap.", color = UiColors.dim, fontSize = 12.sp)
         Text("Honest limits: Android's own Settings > Apps list still shows this app, and someone with your phone unlocked and enough time can find it. " +
             "This only raises the bar against a quick look. There is no PIN recovery by design - if you forget it, clear the app's data in Android Settings.",
             color = UiColors.faint, fontSize = 11.sp)
