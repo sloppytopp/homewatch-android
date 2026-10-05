@@ -28,12 +28,29 @@ private val HELP = listOf(
 
 /** Same "what to do" guide as the web dashboard. Collapsed by default. */
 @Composable
-fun HelpCard() {
+fun HelpCard() = Guide("If something is flagged - what to do", HELP)
+
+@Composable
+private fun Guide(title: String, items: List<Pair<String, String>>) {
     var open by rememberSaveable { mutableStateOf(false) }
     Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(10.dp)).background(UiColors.ring).clickable { open = !open }.padding(14.dp)) {
-        Text((if (open) "▾ " else "▸ ") + "If something is flagged - what to do", color = UiColors.text, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
-        if (open) HELP.forEach { (h, b) ->
+        Text((if (open) "▾ " else "▸ ") + title, color = UiColors.text, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+        if (open) items.forEach { (h, b) ->
             Text("$h $b".replace("  ", " "), color = UiColors.dim, fontSize = 13.sp, modifier = Modifier.padding(top = 8.dp))
         }
     }
 }
+
+private val DIGITAL = listOf(
+    "First, safety:" to "if someone controls or watches your devices, removing their access can alert them. If you may be in danger, talk to an advocate before changing anything (US: National Domestic Violence Hotline 1-800-799-7233, or text START to 88788; tech-safety help at techsafety.org), and use a device they have never touched for sensitive steps.",
+    "Google account:" to "on a trusted device open myaccount.google.com > Security > Your devices and Recent security activity, and sign out anything you don't know. In Google Maps > Location sharing, stop sharing with anyone you don't recognize.",
+    "Apple account:" to "Settings > [your name] lists every signed-in device. In Find My > People, stop sharing locations you don't want shared. On iPhone (iOS 16+), Settings > Privacy & Security > Safety Check can reset sharing and access in one go.",
+    "Family and carrier sharing:" to "check Family Sharing, Google Family Link, and your phone carrier's family locator service (for example Smart Family or Family Locator) for anyone who can see where you are.",
+    "Passwords and email:" to "change passwords from a trusted device, turn on 2-step verification, and check your email for forwarding rules and for recovery phone numbers or emails you didn't add.",
+    "On this phone:" to "Android Settings > Apps > Special app access: look at Device admin apps, Accessibility, Notification access and Usage access for anything you don't recognize. Run Play Protect (Play Store > profile > Play Protect). Be suspicious of apps installed from outside the Play Store or with no icon.",
+    "More help:" to "the Coalition Against Stalkerware (stopstalkerware.org) explains the signs and what to do.",
+)
+
+/** Checklist for the far more common kind of stalking: shared accounts, location sharing and stalkerware. No permissions needed. */
+@Composable
+fun DigitalSafetyCard() = Guide("Digital safety checklist (accounts, location sharing, stalkerware)", DIGITAL)

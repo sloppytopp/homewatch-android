@@ -45,12 +45,40 @@ fun HuntHost(domain: String, onClose: () -> Unit) {
     when (domain) {
         "tracker" -> {
             val t = s.trackers.maxByOrNull { it.rssi }
-            if (t != null) Finder(t.addr, t.label, onClose)
+            var safe by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(false) }
+            if (!safe) SafetyFirst(onContinue = { safe = true }, onClose = onClose)
+            else if (t != null) Finder(t.addr, t.label, onClose)
             else Notice("The tracker isn't being heard right now. Wait a few seconds with scanning on, or move around and try again.", onClose)
         }
         "drone" -> DroneHunt(onClose)
         else -> WifiHunt(onClose)
     }
+}
+
+/** Shown before the finder: finding a tracker is not the first step. Removing it can tip off the person who placed it. */
+@Composable
+private fun SafetyFirst(onContinue: () -> Unit, onClose: () -> Unit) {
+    val ctx = LocalContext.current
+    AlertDialog(
+        containerColor = UiColors.dialogBg, titleContentColor = UiColors.text, textContentColor = UiColors.text,
+        onDismissRequest = onClose, title = { Text("Before you look for it") },
+        text = {
+            Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text("1. In danger right now? Get somewhere safe and call 911 (or your local emergency number).")
+                Text("2. Don't remove, switch off or destroy it yet. If someone is tracking you, taking it away can alert them and make things worse.")
+                Text("3. Document it: when you find it, photograph it where it is, and note the date and time. Export the evidence report from the History tab.")
+                Text("4. Talk to someone first: an advocate (US: National Domestic Violence Hotline 1-800-799-7233, or text START to 88788) or the police. They can help you plan what to do next.")
+                Text("It may also be harmless: a neighbor's or a passer-by's tracker, or one in a borrowed bag or car. A flag is a reason to look, not proof.", fontSize = 12.sp, color = UiColors.dim)
+            }
+        },
+        confirmButton = { TextButton(onClick = onContinue) { Text("I understand - help me find it") } },
+        dismissButton = {
+            Column {
+                TextButton(onClick = { ctx.startActivity(android.content.Intent(android.content.Intent.ACTION_DIAL, android.net.Uri.parse("tel:18007997233")).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)) }) { Text("Open hotline in dialer") }
+                TextButton(onClick = onClose) { Text("Not now") }
+            }
+        },
+    )
 }
 
 @Composable

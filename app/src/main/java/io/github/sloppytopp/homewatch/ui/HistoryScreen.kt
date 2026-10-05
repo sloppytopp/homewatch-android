@@ -59,6 +59,7 @@ fun HistoryScreen() {
             colors = ButtonDefaults.buttonColors(containerColor = UiColors.buttonBg, contentColor = UiColors.buttonFg),
         ) { Text("Export evidence report") }
 
+        DigitalSafetyCard()
         FollowCard(remember(v) { Follow.analyze(Store.trail()) })
         Text("Recent events", color = UiColors.text, fontSize = 16.sp)
         if (events.isEmpty()) Text("Nothing flagged yet.", color = UiColors.dim, fontSize = 12.sp)
