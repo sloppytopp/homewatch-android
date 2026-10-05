@@ -45,7 +45,7 @@ Homewatch is not another AirTag finder. It is the **one place** that looks at tr
 
 ## Install
 - **GitHub Releases**: download the signed APK from the [Releases](../../releases) page.
-- **F-Droid**: submission in progress.
+- **F-Droid**: [merge request open](https://gitlab.com/fdroid/fdroiddata/-/merge_requests/51294) (under review).
 - Requires Android 8+ and a phone with Bluetooth LE. Tested on a TCL 5087Z (Android 11).
 
 ## Permissions
