@@ -1,0 +1,118 @@
+package io.github.sloppytopp.homewatch
+
+import io.github.sloppytopp.homewatch.detect.*
+import org.junit.Assert.*
+import org.junit.Test
+
+class FollowTest {
+    private val min = 60_000L
+    private fun place(vararg ids: String) = ids.toSet()
+    private val home = place("a1", "a2", "a3", "a4")
+    private val work = place("b1", "b2", "b3", "b4")
+    private val shop = place("c1", "c2", "c3", "c4")
+
+    private fun s(t: Long, key: String, p: Set<String>) = Sight(t * min, key, "Tile tracker", p)
+
+    @Test fun trackerAtThreePlacesOverAnHourIsFollowing() {
+        val sights = listOf(s(0, "T", home), s(1, "T", home), s(30, "T", work), s(31, "T", work), s(60, "T", shop), s(61, "T", shop))
+        val hits = Follow.analyze(sights)
+        assertEquals(1, hits.size)
+        assertEquals(3, hits[0].visits.size)
+        assertTrue(hits[0].spanMs >= 60 * min)
+    }
+
+    @Test fun trackerThatStaysAtHomeIsNotFollowing() {
+        val sights = (0..300 step 5).map { s(it.toLong(), "T", home) }
+        assertTrue(Follow.analyze(sights).isEmpty())
+    }
+
+    @Test fun twoPlacesIsNotEnough() {
+        val sights = listOf(s(0, "T", home), s(1, "T", home), s(60, "T", work), s(61, "T", work))
+        assertTrue(Follow.analyze(sights).isEmpty())
+    }
+
+    @Test fun threePlacesInTenMinutesIsNotEnough() {
+        val sights = listOf(s(0, "T", home), s(1, "T", home), s(4, "T", work), s(5, "T", work), s(8, "T", shop), s(9, "T", shop))
+        assertTrue(Follow.analyze(sights).isEmpty())
+    }
+
+    @Test fun driveByPlaceWithOneSightingDoesNotCount() {
+        val sights = listOf(s(0, "T", home), s(1, "T", home), s(30, "T", work), s(60, "T", shop), s(61, "T", shop))
+        assertTrue(Follow.analyze(sights).isEmpty())
+    }
+
+    @Test fun returningToAPlaceReusesItsNumber() {
+        val sights = listOf(s(0, "T", home), s(30, "T", work), s(60, "T", home))
+        assertEquals(listOf(1, 2, 1), Follow.placeNumbers(sights))
+    }
+
+    @Test fun slightlyDifferentWifiViewIsStillTheSamePlace() {
+        val homeLater = place("a1", "a2", "a3", "zz")
+        assertTrue(Follow.same(home, homeLater))
+        assertFalse(Follow.same(home, work))
+    }
+
+    @Test fun noWifiMeansNoPlace() {
+        assertFalse(Follow.same(emptySet(), emptySet()))
+        assertEquals(listOf(-1), Follow.placeNumbers(listOf(s(0, "T", emptySet()))))
+    }
+
+    @Test fun fingerprintHashesAndKeepsStrongest() {
+        val obs = (1..12).map { WifiObs("AA:BB:CC:DD:EE:%02X".format(it), "n$it", -40 - it) } + WifiObs("11:22:33:44:55:66", "weak", -95)
+        val fp = Follow.fingerprint(obs)
+        assertEquals(8, fp.size)
+        assertTrue(fp.none { it.contains(":") })
+    }
+
+    @Test fun engineRaisesAlertWhenTrackerFollows() {
+        var now = 0L
+        val e = Engine(clock = { now })
+        e.running = true; e.wifiEnabled = true
+        fun at(tMin: Long, vararg macs: String) {
+            now = (1000 + tMin) * min
+            e.onWifiScan(macs.mapIndexed { i, m -> WifiObs(m, "n$i", -50 - i) })
+            e.onAdvertisement("T1", -60, Classification(Kind.TRACKER, "Tile tracker"))
+            e.snapshot()
+        }
+        val H = arrayOf("00:00:00:00:00:01", "00:00:00:00:00:02", "00:00:00:00:00:03")
+        val W = arrayOf("00:00:00:00:01:01", "00:00:00:00:01:02", "00:00:00:00:01:03")
+        val S = arrayOf("00:00:00:00:02:01", "00:00:00:00:02:02", "00:00:00:00:02:03")
+        at(0, *H); at(2, *H); at(32, *W); at(34, *W); at(64, *S)
+        at(66, *S)
+        val snap = e.snapshot()
+        assertEquals(Level.ALERT, snap.tracker.level)
+        assertTrue(snap.tracker.message, snap.tracker.message.contains("FOLLOWED"))
+        assertEquals(1, snap.follow.size)
+    }
+}
+
+class EvidenceTest {
+    private val ev = listOf(
+        EventRow(1_000_000, "tracker", Level.WATCH, "Tile tracker nearby: AA rssi=-71"),
+        EventRow(2_000_000, "tracker", Level.ALERT, "Tile tracker has FOLLOWED you"),
+        EventRow(3_000_000, "host", Level.OK, "ignored info line"),
+    )
+    private val utc = java.util.TimeZone.getTimeZone("UTC")
+
+    @Test fun reportVerifiesAndOnlyListsFlaggedEvents() {
+        val r = Evidence.build(5_000_000, ev, emptyList(), emptyList(), utc)
+        assertTrue(Evidence.verify(r))
+        assertTrue(r.contains("2 watch/alert events"))
+        assertFalse(r.contains("ignored info line"))
+    }
+
+    @Test fun editingALineBreaksTheChain() {
+        val r = Evidence.build(5_000_000, ev, emptyList(), emptyList(), utc)
+        assertFalse(Evidence.verify(r.replace("rssi=-71", "rssi=-99")))
+    }
+
+    @Test fun deletingALineBreaksTheChain() {
+        val r = Evidence.build(5_000_000, ev, emptyList(), emptyList(), utc)
+        val cut = r.lines().filterNot { it.startsWith("0001 |") }.joinToString("\n")
+        assertFalse(Evidence.verify(cut))
+    }
+
+    @Test fun emptyReportStillVerifies() {
+        assertTrue(Evidence.verify(Evidence.build(5_000_000, emptyList(), emptyList(), emptyList(), utc)))
+    }
+}

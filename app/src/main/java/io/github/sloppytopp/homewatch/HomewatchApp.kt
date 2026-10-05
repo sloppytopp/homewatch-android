@@ -10,6 +10,7 @@ class HomewatchApp : Application() {
         super.onCreate()
         Prefs.init(this)
         Store.init(this)
+        runCatching { io.github.sloppytopp.homewatch.scan.Monitor.engine.loadTrail(Store.trail()) }
         runCatching { assets.open("oui_watch.csv").bufferedReader().useLines { WifiClassifier.loadCsv(it) } }
     }
 }

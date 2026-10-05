@@ -8,6 +8,7 @@ import io.github.sloppytopp.homewatch.detect.EventRow
 import io.github.sloppytopp.homewatch.detect.Level
 import io.github.sloppytopp.homewatch.detect.RoomItem
 import io.github.sloppytopp.homewatch.detect.SurveyPoint
+import io.github.sloppytopp.homewatch.detect.Sight
 import io.github.sloppytopp.homewatch.detect.RoomScan
 
 /** On-device history. Events never contain operator coordinates; everything older than 30 days is deleted. */
@@ -16,16 +17,34 @@ object Store {
     private const val KEEP_DAYS = 30
 
     fun init(ctx: Context) {
-        helper = object : SQLiteOpenHelper(ctx, "homewatch.db", null, 3) {
+        helper = object : SQLiteOpenHelper(ctx, "homewatch.db", null, 4) {
             override fun onCreate(db: SQLiteDatabase) {
                 db.execSQL("CREATE TABLE events(id INTEGER PRIMARY KEY, ts INTEGER, domain TEXT, level TEXT, msg TEXT)")
                 db.execSQL("CREATE TABLE beeps(id INTEGER PRIMARY KEY, ts INTEGER)")
                 db.execSQL("CREATE INDEX ev_ts ON events(ts)")
-                createRoomTables(db); createSurveyTable(db)
+                createRoomTables(db); createSurveyTable(db); createTrailTable(db)
             }
-            override fun onUpgrade(db: SQLiteDatabase, o: Int, n: Int) { if (o < 2) createRoomTables(db); if (o < 3) createSurveyTable(db) }
+            override fun onUpgrade(db: SQLiteDatabase, o: Int, n: Int) { if (o < 2) createRoomTables(db); if (o < 3) createSurveyTable(db); if (o < 4) createTrailTable(db) }
         }
         prune()
+    }
+
+    private fun createTrailTable(db: SQLiteDatabase) {
+        db.execSQL("CREATE TABLE IF NOT EXISTS trail(ts INTEGER, key TEXT, label TEXT, place TEXT)")
+    }
+
+    @Synchronized fun addSight(s: Sight) {
+        helper.writableDatabase.insert("trail", null, ContentValues().apply {
+            put("ts", s.ts); put("key", s.key); put("label", s.label); put("place", s.place.joinToString(","))
+        })
+    }
+
+    @Synchronized fun trail(): List<Sight> {
+        val out = ArrayList<Sight>()
+        helper.readableDatabase.rawQuery("SELECT ts,key,label,place FROM trail ORDER BY ts", null).use {
+            while (it.moveToNext()) out += Sight(it.getLong(0), it.getString(1), it.getString(2), it.getString(3).split(",").filter { p -> p.isNotEmpty() }.toSet())
+        }
+        return out
     }
 
     private fun createSurveyTable(db: SQLiteDatabase) {
@@ -134,6 +153,7 @@ object Store {
         helper.writableDatabase.delete("events", "ts<?", arrayOf("$cutoff"))
         helper.writableDatabase.delete("beeps", "ts<?", arrayOf("$cutoff"))
         helper.writableDatabase.delete("survey", "ts<?", arrayOf("$cutoff"))
+        helper.writableDatabase.delete("trail", "ts<?", arrayOf("$cutoff"))
     }
 
     @Synchronized fun clearAll() {
@@ -142,5 +162,6 @@ object Store {
         helper.writableDatabase.delete("room_item", null, null)
         helper.writableDatabase.delete("room_scan", null, null)
         helper.writableDatabase.delete("survey", null, null)
+        helper.writableDatabase.delete("trail", null, null)
     }
 }

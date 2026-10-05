@@ -32,6 +32,7 @@ data class Snapshot(
     val inspect: List<InspectRow> = emptyList(),
     val now: Long = 0,
     val demo: Boolean = false,
+    val follow: List<FollowHit> = emptyList(),
 )
 
 /**
@@ -43,6 +44,7 @@ class Engine(
     private val onAlert: (domain: String, genericText: String) -> Unit = { _, _ -> },
     private val eventSink: (EventRow) -> Unit = {},
     private val isMine: (String) -> Boolean = { false },
+    private val trailSink: (Sight) -> Unit = {},
 ) {
     private class Sighting(val kind: Kind, val label: String, val first: Long) {
         var last = first
@@ -57,6 +59,11 @@ class Engine(
     private val sightings = HashMap<String, Sighting>()
     private val events = ArrayDeque<EventRow>()
     private val lastEmit = HashMap<String, Long>()
+    private val trail = ArrayList<Sight>()
+    private val lastTrail = HashMap<String, Long>()
+    private var placeFp: Set<String> = emptySet()
+    private var followAt = 0L
+    private var followHits: List<FollowHit> = emptyList()
     private var adsSeen = 0L
     private var ambient = 0L
     private var lastDroneLevel = Level.OK
@@ -110,9 +117,13 @@ class Engine(
 
     @Synchronized fun clearInspect() { inspect.clear() }
 
+    /** Reload saved tracker sightings (so following detection survives an app restart). */
+    @Synchronized fun loadTrail(saved: List<Sight>) { trail.clear(); trail += saved; followAt = 0 }
+
     @Synchronized
     fun onWifiScan(obs: List<WifiObs>) {
         wifiAt = clock()
+        placeFp = Follow.fingerprint(obs)
         val rows = ArrayList<WifiRow>()
         val drones = ArrayList<WifiHit>()
         val cams = ArrayList<WifiHit>()
@@ -160,6 +171,17 @@ class Engine(
         val mineCount = allTrackers.size - trackers.size
         val wifiFresh = wifiAt != 0L && now - wifiAt <= WIFI_FRESH_MS
 
+        // ---- following: log each unknown tracker about once a minute with where we are (Wi-Fi fingerprint), then look for the same one at several places
+        if (!demoMode && wifiFresh && placeFp.isNotEmpty()) trackers.forEach { (a, s) ->
+            if (now - (lastTrail[a] ?: 0L) >= TRAIL_EVERY_MS) {
+                lastTrail[a] = now
+                Sight(now, a, s.label, placeFp).also { trail += it; trailSink(it) }
+                while (trail.size > MAX_TRAIL) trail.removeAt(0)
+            }
+        }
+        if (now - followAt >= 30_000L) { followAt = now; followHits = Follow.analyze(trail) }
+        val following = followHits.filter { h -> trackers.containsKey(h.key) }
+
         // ---- drone: Remote ID is unauthenticated, so word it as a claim
         var droneState = DomainState(Level.OK, "No Remote ID drone heard (Bluetooth${if (wifiEnabled) " + Wi-Fi" else ""})")
         val fixes = ArrayList<DroneFix>()
@@ -190,7 +212,12 @@ class Engine(
         lastDroneLevel = droneState.level
 
         // ---- trackers: ALERT only when persistent AND close; otherwise WATCH
-        val trackerState = if (trackers.isNotEmpty()) {
+        val trackerState = if (following.isNotEmpty()) {
+            val h = following.first()
+            val msg = "${h.label} has FOLLOWED you: heard ${h.key} at ${h.visits.size} different places over ${h.spanMs / 60_000} min"
+            emit("tracker", Level.ALERT, "follow:${h.key}", msg, 1_800_000, now)
+            DomainState(Level.ALERT, msg)
+        } else if (trackers.isNotEmpty()) {
             val (addr, s) = trackers.entries.maxByOrNull { it.value.rssi }!!
             val dur = (s.last - s.first) / 1000
             val close = dur >= 300 && s.n >= 5 && s.rssiMax >= -70
@@ -200,7 +227,7 @@ class Engine(
             DomainState(lvl, msg)
         } else DomainState(Level.OK, "No unknown trackers in range ($adsSeen Bluetooth ads heard, $ambient normal Apple devices ignored" +
             (if (mineCount > 0) ", $mineCount of your own trackers" else "") + ")")
-        if (trackerState.level == Level.ALERT && lastTrackerLevel != Level.ALERT) alert("tracker", "A tracker has stayed close to the house.")
+        if (trackerState.level == Level.ALERT && lastTrackerLevel != Level.ALERT) alert("tracker", if (following.isNotEmpty()) "A tracker has followed you across several places." else "A tracker has stayed close to the house.")
         lastTrackerLevel = trackerState.level
 
         // ---- camera-like Wi-Fi sources (spy cams often broadcast their own network)
@@ -234,7 +261,7 @@ class Engine(
             wifi = if (wifiFresh) wifiRows else emptyList(),
             fixes = fixes,
             adsSeen = adsSeen, ambientIgnored = ambient, events = events.toList(), error = error,
-            startedAt = startedAt, wifiAt = wifiAt, now = now, demo = demoMode,
+            startedAt = startedAt, wifiAt = wifiAt, now = now, demo = demoMode, follow = followHits,
             inspect = inspect.entries.filter { now - it.value.last <= 60_000 }
                 .map { (a, x) -> InspectRow(a, x.name, x.rssi, x.company, (now - x.last) / 1000) }.sortedByDescending { it.rssi },
         )
@@ -259,6 +286,8 @@ class Engine(
         const val FORGET_MS = 3_600_000L    // forgotten entirely after 1 h
         const val WIFI_FRESH_MS = 180_000L  // a Wi-Fi scan counts for 3 min
         const val MAX_EVENTS = 200
+        const val TRAIL_EVERY_MS = 60_000L
+        const val MAX_TRAIL = 6000
         val COMPANIES = mapOf(
             0x004C to "Apple", 0x0075 to "Samsung", 0x0006 to "Microsoft", 0x00E0 to "Google", 0x0087 to "Garmin",
             0x0171 to "Amazon", 0x02E5 to "Espressif (IoT)", 0x0059 to "Nordic (IoT)", 0x0157 to "Huami/Amazfit",

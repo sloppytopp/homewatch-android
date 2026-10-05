@@ -58,6 +58,7 @@ import io.github.sloppytopp.homewatch.scan.Monitor
 import io.github.sloppytopp.homewatch.scan.ScanService
 import io.github.sloppytopp.homewatch.ui.DroneMapView
 import io.github.sloppytopp.homewatch.ui.HelpCard
+import io.github.sloppytopp.homewatch.ui.FollowCard
 import io.github.sloppytopp.homewatch.ui.Heartbeat
 import io.github.sloppytopp.homewatch.ui.LockScreen
 import io.github.sloppytopp.homewatch.ui.HuntHost
@@ -259,6 +260,7 @@ private fun StatusScreen() {
         val f = SimpleDateFormat("HH:mm:ss", Locale.US)
         s.events.take(5).forEach { Text("${f.format(Date(it.ts))}  ${it.level.name.lowercase()}  ${it.msg}", color = UiColors.text, fontSize = 12.sp) }
     }
+    FollowCard(s.follow)
     HelpCard()
     Text("Detect-only. A quiet screen is not a guarantee of safety. Nothing leaves this phone.", color = UiColors.faint, fontSize = 12.sp)
 

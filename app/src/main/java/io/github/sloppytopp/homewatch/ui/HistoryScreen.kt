@@ -18,6 +18,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.github.sloppytopp.homewatch.data.Store
+import io.github.sloppytopp.homewatch.detect.Evidence
+import io.github.sloppytopp.homewatch.detect.Follow
 import io.github.sloppytopp.homewatch.detect.Report
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -44,6 +46,20 @@ fun HistoryScreen() {
         Text("Beeps logged (72 h): ${beeps.size}", color = UiColors.dim, fontSize = 12.sp)
         report.forEach { Text(it, color = UiColors.text, fontSize = 12.sp) }
 
+        Text("Evidence for police or an advocate", color = UiColors.text, fontSize = 16.sp)
+        Text("Makes a plain-text report of everything flagged (30 days) with a tamper-evident hash chain. You choose where to send it; nothing is sent automatically.", color = UiColors.dim, fontSize = 12.sp)
+        val ctx = androidx.compose.ui.platform.LocalContext.current
+        Button(
+            onClick = {
+                val rpt = Evidence.build(System.currentTimeMillis(), Store.events(now - 30 * 86_400_000L, 1500), Follow.analyze(Store.trail()), Store.trail())
+                ctx.startActivity(android.content.Intent.createChooser(
+                    android.content.Intent(android.content.Intent.ACTION_SEND).setType("text/plain")
+                        .putExtra(android.content.Intent.EXTRA_SUBJECT, "Homewatch evidence report").putExtra(android.content.Intent.EXTRA_TEXT, rpt), "Share report"))
+            }, modifier = Modifier.fillMaxWidth(),
+            colors = ButtonDefaults.buttonColors(containerColor = UiColors.buttonBg, contentColor = UiColors.buttonFg),
+        ) { Text("Export evidence report") }
+
+        FollowCard(remember(v) { Follow.analyze(Store.trail()) })
         Text("Recent events", color = UiColors.text, fontSize = 16.sp)
         if (events.isEmpty()) Text("Nothing flagged yet.", color = UiColors.dim, fontSize = 12.sp)
         events.take(40).forEach { Text("${f.format(Date(it.ts))}  ${it.level.name.lowercase()}  ${it.domain}: ${it.msg}", color = UiColors.text, fontSize = 12.sp) }
