@@ -115,4 +115,29 @@ class EvidenceTest {
     @Test fun emptyReportStillVerifies() {
         assertTrue(Evidence.verify(Evidence.build(5_000_000, emptyList(), emptyList(), emptyList(), utc)))
     }
+
+    @Test fun editingTheSummaryOrTrailBreaksTheChain() {
+        val hit = FollowHit("T", "Tile tracker", listOf(Visit(1, 0, 60_000, 3), Visit(2, 1_800_000, 1_860_000, 3), Visit(3, 3_600_000, 3_660_000, 3)))
+        val r = Evidence.build(5_000_000, ev, listOf(hit), emptyList(), utc)
+        assertTrue(Evidence.verify(r))
+        assertFalse(Evidence.verify(r.replace("3 different places", "1 different places")))
+        assertFalse(Evidence.verify(r.replace("place 2:", "place 9:")))
+        assertFalse(Evidence.verify(r.replace("Generated: 1970", "Generated: 2024")))
+    }
+
+    @Test fun clearTrailForgetsFollowing() {
+        var now = 0L
+        val e = Engine(clock = { now })
+        e.running = true; e.wifiEnabled = true
+        val min = 60_000L
+        fun at(t: Long, p: Int) {
+            now = (1000 + t) * min
+            e.onWifiScan((1..3).map { WifiObs("00:00:00:00:%02X:%02X".format(p, it), "n", -50 - it) })
+            e.onAdvertisement("T1", -60, Classification(Kind.TRACKER, "Tile tracker")); e.snapshot()
+        }
+        at(0, 1); at(2, 1); at(32, 2); at(34, 2); at(64, 3); at(66, 3)
+        assertEquals(1, e.snapshot().follow.size)
+        e.clearTrail()
+        assertTrue(e.snapshot().follow.isEmpty())
+    }
 }

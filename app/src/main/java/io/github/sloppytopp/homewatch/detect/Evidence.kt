@@ -42,15 +42,17 @@ object Evidence {
             }
             out.appendLine()
         }
+        val body = out.toString()
+        val start0 = sha("$VERSION|${nowMs}|${sha(body)}")
+        var h = start0
         out.appendLine("EVENT LOG  (line number | time | level | area | detail | chained hash)")
-        var h = sha("$VERSION|${nowMs}")
         flagged.forEachIndexed { i, e ->
             val line = "%04d | %s | %s | %s | %s".format(i + 1, fmt(e.ts, tz), e.level.name.lowercase(), e.domain, e.msg.replace('\n', ' '))
             h = sha("$h|$line")
             out.appendLine("$line | ${h.take(12)}")
         }
         out.appendLine()
-        out.appendLine("CHAIN START: ${sha("$VERSION|${nowMs}").take(12)}  (generated-at ${nowMs} ms)")
+        out.appendLine("CHAIN START: ${start0.take(12)}  (generated-at ${nowMs} ms)")
         out.appendLine("CHAIN END (final hash): $h")
         out.appendLine("To keep this tamper-evident, email or text the CHAIN END value to yourself or an advocate right now: it fixes the time and content.")
         return out.toString()
@@ -62,9 +64,12 @@ object Evidence {
         val gen = lines.firstOrNull { it.startsWith("CHAIN START:") } ?: return false
         val ms = Regex("generated-at (\\d+) ms").find(gen)?.groupValues?.get(1) ?: return false
         val end = lines.firstOrNull { it.startsWith("CHAIN END (final hash): ") }?.removePrefix("CHAIN END (final hash): ")?.trim() ?: return false
-        var h = sha("$VERSION|$ms")
         val start = lines.indexOfFirst { it.startsWith("EVENT LOG") }
         if (start < 0) return false
+        // everything above the event log (generated time, summary, tracker trail) is covered too
+        val body = lines.take(start).joinToString("\n") + "\n"
+        var h = sha("$VERSION|$ms|${sha(body)}")
+        if (gen.removePrefix("CHAIN START:").trim().take(12) != h.take(12)) return false
         for (l in lines.drop(start + 1)) {
             if (l.isBlank()) break
             val cut = l.lastIndexOf(" | ")

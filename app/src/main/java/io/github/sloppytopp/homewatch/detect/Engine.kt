@@ -120,6 +120,9 @@ class Engine(
     /** Reload saved tracker sightings (so following detection survives an app restart). */
     @Synchronized fun loadTrail(saved: List<Sight>) { trail.clear(); trail += saved; followAt = 0 }
 
+    /** "Delete all history" must also forget the in-memory trail, or following alerts would keep firing from deleted data. */
+    @Synchronized fun clearTrail() { trail.clear(); lastTrail.clear(); followHits = emptyList(); followAt = 0 }
+
     @Synchronized
     fun onWifiScan(obs: List<WifiObs>) {
         wifiAt = clock()
