@@ -43,10 +43,26 @@ Homewatch is not another AirTag finder. It is the **one place** that looks at tr
 - **WiGLE is public.** Uploading a survey puts the networks you heard - including your own - and where you walked on a public map. Don't upload surveys made near a home you want to keep private.
 - Android only allows a few Wi-Fi scans per couple of minutes and needs the Location switch on (Homewatch does not read, save or send your location). Some phones stop background apps to save battery; the app links to the battery settings.
 
-## Install
-- **GitHub Releases**: download the signed APK from the [Releases](../../releases) page.
-- **F-Droid**: [merge request open](https://gitlab.com/fdroid/fdroiddata/-/merge_requests/51294) (under review).
-- Requires Android 8+ and a phone with Bluetooth LE. Tested on a TCL 5087Z (Android 11).
+## Download
+Only use the official sources below. Other "APK sites" can host modified copies, which matters for a privacy tool.
+
+| Source | How |
+|---|---|
+| **GitHub Releases** (official) | Download `homewatch-<version>.apk` from the [latest release](../../releases/latest) |
+| **Obtainium** (auto-updates from GitHub) | [Add Homewatch to Obtainium](https://apps.obtainium.imranr.dev/redirect?r=obtainium://add/https://github.com/sloppytopp/homewatch-android) - or in Obtainium tap **Add App** and paste `https://github.com/sloppytopp/homewatch-android` |
+| **F-Droid** | [merge request open](https://gitlab.com/fdroid/fdroiddata/-/merge_requests/51294) (under review) |
+
+Requires Android 8+ and a phone with Bluetooth LE. Tested on a TCL 5087Z (Android 11). After installing, tap **Try it with sample data** to see every screen work before trusting it with anything real.
+
+### Verify your download
+Each release lists two values you can check:
+```
+sha256sum -c homewatch-<version>.apk.sha256                 # file is intact
+apksigner verify --print-certs homewatch-<version>.apk      # signer must match the fingerprint below
+```
+Official signing certificate SHA-256:
+`ba208cc13101a7c8d4e8fa4d8016e5b333bd522d64c71d2a723179410f049c22`
+If the fingerprint is different, it is not an official build - don't install it.
 
 ## Permissions
 | Permission | Why |
