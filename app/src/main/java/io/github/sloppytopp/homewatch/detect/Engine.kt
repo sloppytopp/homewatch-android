@@ -31,6 +31,7 @@ data class Snapshot(
     val wifiAt: Long = 0,
     val inspect: List<InspectRow> = emptyList(),
     val now: Long = 0,
+    val demo: Boolean = false,
 )
 
 /**
@@ -75,6 +76,8 @@ class Engine(
     private var demoUntil = 0L
 
     @Volatile var running = false
+    /** Sample-data mode: synthetic sightings, never logged to history and never alerting. */
+    @Volatile var demoMode = false
     @Volatile var wifiEnabled = false
     @Volatile var wifiNote: String? = null
     @Volatile var error: String? = null
@@ -183,7 +186,7 @@ class Engine(
                 x.info?.let { fixes += DroneFix(it.basicId ?: x.row.bssid, it.lat, it.lon, it.operatorLat, it.operatorLon, it.altM, x.row.level) }
             }
         }
-        if (droneState.level == Level.ALERT && lastDroneLevel != Level.ALERT) onAlert("drone", "A drone signal was detected near the house.")
+        if (droneState.level == Level.ALERT && lastDroneLevel != Level.ALERT) alert("drone", "A drone signal was detected near the house.")
         lastDroneLevel = droneState.level
 
         // ---- trackers: ALERT only when persistent AND close; otherwise WATCH
@@ -197,7 +200,7 @@ class Engine(
             DomainState(lvl, msg)
         } else DomainState(Level.OK, "No unknown trackers in range ($adsSeen Bluetooth ads heard, $ambient normal Apple devices ignored" +
             (if (mineCount > 0) ", $mineCount of your own trackers" else "") + ")")
-        if (trackerState.level == Level.ALERT && lastTrackerLevel != Level.ALERT) onAlert("tracker", "A tracker has stayed close to the house.")
+        if (trackerState.level == Level.ALERT && lastTrackerLevel != Level.ALERT) alert("tracker", "A tracker has stayed close to the house.")
         lastTrackerLevel = trackerState.level
 
         // ---- camera-like Wi-Fi sources (spy cams often broadcast their own network)
@@ -215,7 +218,7 @@ class Engine(
             }
             else -> DomainState(Level.OK, "No camera-like Wi-Fi sources (${wifiRows.size} networks in range)")
         }
-        if (cameraState.level == Level.ALERT && lastCameraLevel != Level.ALERT) onAlert("camera", "Something camera-like showed up very close on Wi-Fi.")
+        if (cameraState.level == Level.ALERT && lastCameraLevel != Level.ALERT) alert("camera", "Something camera-like showed up very close on Wi-Fi.")
         lastCameraLevel = cameraState.level
 
         if (demo != null && now < demoUntil) fixes += demo!!
@@ -231,11 +234,13 @@ class Engine(
             wifi = if (wifiFresh) wifiRows else emptyList(),
             fixes = fixes,
             adsSeen = adsSeen, ambientIgnored = ambient, events = events.toList(), error = error,
-            startedAt = startedAt, wifiAt = wifiAt, now = now,
+            startedAt = startedAt, wifiAt = wifiAt, now = now, demo = demoMode,
             inspect = inspect.entries.filter { now - it.value.last <= 60_000 }
                 .map { (a, x) -> InspectRow(a, x.name, x.rssi, x.company, (now - x.last) / 1000) }.sortedByDescending { it.rssi },
         )
     }
+
+    private fun alert(domain: String, text: String) { if (!demoMode) onAlert(domain, text) }
 
     private fun pos(i: RemoteIdInfo?) = if (i?.lat != null && i.lon != null) " at %.5f,%.5f".format(i.lat, i.lon) else ""
     private fun op(i: RemoteIdInfo?) = if (i?.operatorLat != null && i.operatorLon != null) ", operator at %.5f,%.5f".format(i.operatorLat, i.operatorLon) else ""
@@ -246,7 +251,7 @@ class Engine(
         val e = EventRow(now, domain, level, msg)
         events.addFirst(e)
         while (events.size > MAX_EVENTS) events.removeLast()
-        eventSink(e)
+        if (!demoMode) eventSink(e)
     }
 
     companion object {

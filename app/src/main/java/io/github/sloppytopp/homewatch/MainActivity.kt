@@ -53,6 +53,7 @@ import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import androidx.core.location.LocationManagerCompat
 import io.github.sloppytopp.homewatch.data.Prefs
+import io.github.sloppytopp.homewatch.scan.Demo
 import io.github.sloppytopp.homewatch.scan.Monitor
 import io.github.sloppytopp.homewatch.scan.ScanService
 import io.github.sloppytopp.homewatch.ui.DroneMapView
@@ -214,10 +215,11 @@ private fun StatusScreen() {
     }
 
     Button(
-        onClick = { if (s.running) ctx.startService(Intent(ctx, ScanService::class.java).setAction(ScanService.ACTION_STOP)) else onStartTapped() },
+        onClick = { if (Demo.active) Demo.stop() else if (s.running) ctx.startService(Intent(ctx, ScanService::class.java).setAction(ScanService.ACTION_STOP)) else onStartTapped() },
         modifier = Modifier.fillMaxWidth(),
         colors = ButtonDefaults.buttonColors(containerColor = UiColors.buttonBg, contentColor = UiColors.buttonFg),
-    ) { Text(if (s.running) "Stop scanning" else "Start scanning") }
+    ) { Text(if (Demo.active) "Stop sample data" else if (s.running) "Stop scanning" else "Start scanning") }
+    if (!s.running && !Demo.active) TextButton(onClick = { Demo.start() }) { Text("Try it with sample data (nothing real is scanned)") }
 
     LiveBanner(s)
 

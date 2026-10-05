@@ -1,0 +1,5 @@
+Version 0.6.0
+- "Try it with sample data" mode (clearly labelled fake sightings, nothing logged)
+- Release signing + shrunken build; clean F-Droid metadata
+- Fix: CSV formula injection in the WiGLE export
+- Tap-to-find hunts with compass, room sweeps, survey walks and exports, discreet mode, "This is mine"

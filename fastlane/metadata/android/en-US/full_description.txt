@@ -1,0 +1,25 @@
+Homewatch helps you check whether anything nearby is tracking or watching you - using only your phone's own Bluetooth and Wi-Fi radios. No account, no cloud, no ads, no analytics. It cannot even connect to the internet.
+
+WHAT IT DOES
+- Finds Bluetooth trackers that are separated from their owner (Apple Find My / AirTag-style, Tile, Samsung SmartTag, Chipolo) and ignores normal "owner nearby" signals
+- Listens for FAA Remote ID drone broadcasts over Bluetooth and Wi-Fi, worded honestly as claims (Remote ID can be faked)
+- Flags camera-like and drone-like Wi-Fi networks
+- Tells you in plain words: "All clear", "Keeping an eye on something" or "Needs your attention" - with live proof it is working
+- Tap-to-find: tap an alert for a hot/cold meter, warmer/colder arrow, a real compass sweep, and a GPS+compass arrow for drones that broadcast a position
+- Room sweeps: build a baseline per room, spot what is NEW, and see which room a device is probably in
+- Survey walks: log what you hear while you walk, see rough source positions, and save a KML (Google Earth) or WiGLE-format file - saved locally, nothing uploads
+- "This is mine" for your own trackers so they stop flagging
+- Dark, low-glare screens and a dim-red night mode, so searching at night does not light up the street
+- Discreet mode: neutral notifications hidden on the lock screen, PIN lock, hidden from recents and screenshots, a Notes/Weather disguise, one-tap quick exit
+- "Try it with sample data" shows every screen working before you trust it with anything real
+
+HONEST LIMITS
+A quiet screen is NOT a guarantee of safety. A phone cannot see drones without Remote ID, cameras that only record to an SD card, cellular/GPS trackers, or most hidden devices. Signal-strength distance and direction are rough estimates, and walls bend them. Android limits how often Wi-Fi can be scanned and needs the Location switch on (Homewatch does not read, save or send your location). Some phones stop background apps to save battery.
+
+PRIVACY
+Everything stays on the phone. There is no internet permission. History is deleted after 30 days, and you can delete everything with one tap. Drone operator positions are shown live and never saved. The optional address search for your home uses Android's own lookup service; GPS and typed coordinates send nothing.
+
+SAFETY
+If you find something you do not own, leave it where it is, photograph it, and contact local law enforcement. Never shoot at, jam or interfere with a drone. If you feel unsafe (for example because of a stalker or abusive partner), contact local police or a hotline; in the US, the National Domestic Violence Hotline is 1-800-799-7233.
+
+Detect-only: Homewatch never jams, spoofs or transmits. Free and open source (MIT).

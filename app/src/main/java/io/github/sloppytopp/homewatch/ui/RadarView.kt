@@ -81,7 +81,7 @@ fun RadarView(s: Snapshot) {
 
 @Composable
 fun DroneMapView(s: Snapshot) {
-    val home = Prefs.home
+    val home = Prefs.displayHome
     val fixes = s.fixes.filter { it.lat != null && it.lon != null }
     if (home == null) {
         Text("Set your home location in Settings to see drones plotted on a map.", color = UiColors.dim, fontSize = 13.sp); return

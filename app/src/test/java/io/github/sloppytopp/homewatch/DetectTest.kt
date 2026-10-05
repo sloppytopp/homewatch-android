@@ -354,3 +354,23 @@ class SurveyExportTest {
         assertTrue(Export.wigleCsv(listOf(p), "x", "m", "r", "d", "b").contains("\"My, \"\"net\"\"\""))
     }
 }
+
+
+class DemoModeTest {
+    @Test fun demoNeverLogsOrAlerts() {
+        var t = 1_000L
+        val logged = mutableListOf<EventRow>(); val alerts = mutableListOf<String>()
+        val e = Engine({ t }, { d, _ -> alerts += d }, { logged += it })
+        e.demoMode = true; e.running = true
+        e.onAdvertisement("X", -60, Classification(Kind.DRONE, "Remote ID broadcast", RemoteIdInfo(basicId = "D", lat = 1.0, lon = 2.0)))
+        val s = e.snapshot()
+        assertEquals(Level.ALERT, s.drone.level)      // tiles still show the sample
+        assertTrue(s.demo)
+        assertTrue(logged.isEmpty() && alerts.isEmpty())   // but nothing is saved or pushed
+        e.demoMode = false
+        t += 500_000
+        e.onAdvertisement("Y", -60, Classification(Kind.DRONE, "Remote ID broadcast", RemoteIdInfo(basicId = "E", lat = 1.0, lon = 2.0)))
+        e.snapshot()
+        assertEquals(1, logged.size)                  // real sightings are logged again
+    }
+}

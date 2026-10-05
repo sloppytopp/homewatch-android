@@ -1,0 +1,27 @@
+# Draft metadata for https://gitlab.com/fdroid/fdroiddata (metadata/io.github.sloppytopp.homewatch.yml)
+Categories:
+  - Security
+  - System
+License: MIT
+AuthorName: Ryan Davis
+SourceCode: https://github.com/sloppytopp/homewatch-android
+IssueTracker: https://github.com/sloppytopp/homewatch-android/issues
+Changelog: https://github.com/sloppytopp/homewatch-android/blob/HEAD/CHANGELOG.md
+
+AutoName: Homewatch
+
+RepoType: git
+Repo: https://github.com/sloppytopp/homewatch-android.git
+
+Builds:
+  - versionName: 0.6.0
+    versionCode: 7
+    commit: v0.6.0
+    subdir: app
+    gradle:
+      - yes
+
+AutoUpdateMode: Version
+UpdateCheckMode: Tags
+CurrentVersion: 0.6.0
+CurrentVersionCode: 7

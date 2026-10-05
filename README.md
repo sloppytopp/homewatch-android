@@ -1,36 +1,69 @@
 # Homewatch for Android
-Detect-only home counter-surveillance for Android. Sister project of [homewatch](https://github.com/sloppytopp/homewatch) (Linux).
-It listens for **Remote ID drones** and **separated Bluetooth trackers** (Apple Find My / AirTag, Tile, Samsung SmartTag, Chipolo)
-using only the phone's own Bluetooth radio. **No account, no cloud, no analytics - nothing leaves the phone.** It never jams, spoofs or transmits.
 
-![dark, low-glare main screen](docs/screenshot.png)
+**Check whether anything nearby is tracking or watching you - using only your phone's own radios. Nothing leaves your phone.**
 
-## Status: v0.5
-- [x] Dark, low-glare UI (true black, muted colors; every status is word + icon + color) and a **night mode** (dim red on black)
-- [x] Bluetooth LE scanner: Remote ID drones, separated Apple Find My / Tile / SmartTag / Chipolo trackers (foreground service, soft chime / vibrate / silent - never a voice)
-- [x] Wi-Fi scanning: Remote ID beacons, drone-like and camera-like networks (name + vendor tables)
-- [x] Proximity radar (rough, honestly labelled) and a drone map with real Remote ID positions vs your home; demo-drone preview
-- [x] Home location: phone GPS, address search (Android's lookup service, checked against GPS), or typed numbers - stored on the phone only
-- [x] On-device history (30 days), "I heard my sensor beep" log and report with a background baseline, delete-all button
-- [x] **Nearby** tab: every Wi-Fi network and (optionally) every Bluetooth device in a list with signal bars; tap a network to mark it yours
-- [x] **Tap-to-find**: tap a flagged tile or the alert notification -> hot/cold meter, warmer/colder arrow, turn-in-place compass sweep (trackers), GPS + compass arrow with distance (drones that broadcast a position), Wi-Fi source meter
-- [x] **"This is mine"** for your own trackers (they stop flagging and show green), and a real compass dial (smoothed heading, calibration hint) in the finders
-- [x] **Survey walk + exports**: log Wi-Fi/tracker sightings with GPS while you walk, see a local map with rough source positions (refuses to guess if you didn't really move), save a **KML** for Google Earth or a **WiGLE-format CSV** - exports are local files only, nothing uploads; Wi-Fi detail dialog copies a MAC and opens wigle.net so you can check how long a network has been around
-- [x] **Room sweeps**: sweep each room for 45 s to build a baseline, re-sweep to spot NEW devices, and see which room a device is probably in (no GPS)
-- [x] **Discreet mode**: generic notifications hidden on the lock screen, hidden from recents/screenshots, optional PIN lock, launcher name+icon disguise (Notes / Weather), one-tap quick exit
-- [x] "Is it working?" feedback: breathing dot, live counts and scan ages, plain-language banner, guided 30-second sweep, first-run welcome, night switch on every screen
-- [x] 47 unit tests (same packet fixtures as the Linux tool)
-- [ ] Optional RTL-SDR support; one-time "Pro" extras. Core detection stays free.
+Detect-only. No account, no cloud, no ads, no analytics, and no internet permission at all.
+
+<p>
+<img src="fastlane/metadata/android/en-US/images/phoneScreenshots/1_status.png" width="24%" alt="Status with plain-language banner (sample data)">
+<img src="fastlane/metadata/android/en-US/images/phoneScreenshots/2_nearby.png" width="24%" alt="Nearby Wi-Fi and Bluetooth list (sample data)">
+<img src="fastlane/metadata/android/en-US/images/phoneScreenshots/3_radar.png" width="24%" alt="Proximity radar and drone map (sample data)">
+<img src="fastlane/metadata/android/en-US/images/phoneScreenshots/4_finder.png" width="24%" alt="Tap-to-find meter and compass (sample data)">
+</p>
+
+_All screenshots use the built-in sample data - no real networks or places._
+
+## What it does
+- **Trackers**: finds Bluetooth trackers separated from their owner (Apple Find My / AirTag-style, Tile, Samsung SmartTag, Chipolo). Normal "owner nearby" signals are ignored on purpose.
+- **Drones**: listens for FAA **Remote ID** broadcasts over Bluetooth and Wi-Fi - worded as *claims*, because Remote ID can be faked.
+- **Camera-like Wi-Fi**: flags networks that look like cameras or drones (by name and maker).
+- **One plain answer** - "All clear" / "Keeping an eye on something" / "Needs your attention" - with live proof it is working (heartbeat, scan ages, counts).
+- **Tap-to-find**: tap an alert for a hot/cold meter, a warmer/colder arrow, a real compass sweep (trackers), or a GPS + compass arrow with distance (drones that broadcast a position).
+- **Room sweeps**: baseline each room, spot what is *new*, and see which room a device is probably in - without GPS.
+- **Survey walks**: log what you hear while you walk, see rough source positions, and save a **KML** (Google Earth) or **WiGLE-format CSV**. Files are saved locally; nothing uploads.
+- **"This is mine"** for your own trackers, so they stop flagging.
+- **Calm by design**: true-black, low-glare screens and a dim-red night mode, so searching at night does not light up the street. Status is always word + icon + colour.
+- **Discreet mode**: neutral notifications hidden on the lock screen, PIN lock, hidden from recent apps and screenshots, a Notes/Weather launcher disguise, one-tap quick exit.
+- **"Try it with sample data"**: see every screen work (clearly labelled, nothing real scanned) before you trust it.
+
+## How it compares
+Honest answer: tracker detection alone is already well covered.
+- [**AirGuard**](https://github.com/seemoo-lab/AirGuard) (TU Darmstadt, open source) is excellent at tracking *you* over time with AirTags, SmartTags and Google trackers, and Google and Apple ship built-in unknown-tracker alerts. Use them too.
+- Open-source Remote ID scanner apps exist for drones.
+
+Homewatch is not another AirTag finder. It is the **one place** that looks at trackers, drones and camera-like networks together, tells you in plain words what it found, **walks you to it**, checks it **room by room**, and exports a **survey** - in a calm interface made for being used at night, possibly under stress.
 
 ## Read this first
-- **Not a guarantee of safety.** A quiet screen means "nothing seen by this radio". Drones without Remote ID, SD-card cameras and cellular trackers are invisible to a phone.
-- **Remote ID is unauthenticated.** Anyone can fake it, so an alert means a broadcast *claims* a drone. Operator coordinates are shown live and never stored.
-- **Do not interfere with a drone** (shooting at or jamming one is a federal crime). Report it to law enforcement or the FAA.
-- Apple "owner nearby" Find My signals are ignored on purpose: only *separated* trackers, and only when persistent and close, raise an alert.
-- Android 11 and older only deliver Bluetooth scan results while the Location switch is on; Homewatch does not read, save or send location.
-- Some phones kill background apps aggressively; the app links to battery settings. Tested on a TCL 5087Z, Android 11. Wi-Fi scans are throttled by Android (about 4 per 2 minutes) and need the Location switch on.
+- **Not a guarantee of safety.** A quiet screen means "nothing seen by this radio". A phone cannot see drones without Remote ID, cameras that only record to an SD card, cellular/GPS trackers, or most hidden devices.
+- **Remote ID is unauthenticated.** Anyone can fake it; an alert means a broadcast *claims* a drone. Operator positions are shown live and never saved.
+- **Distance and direction are rough.** Signal strength gives a crude distance, badly distorted by walls and the phone's antenna, and no direction on its own. Survey estimates need a real outdoor walk; GPS drifts indoors.
+- **Do not interfere with a drone** (shooting at or jamming one is a federal crime in the US). Report it to law enforcement or the FAA.
+- **If you find something you don't own**, leave it in place, photograph it, and contact local law enforcement.
+- **If you feel unsafe** (for example because of a stalker or abusive partner), contact local police or a hotline. In the US: National Domestic Violence Hotline, 1-800-799-7233.
+- **WiGLE is public.** Uploading a survey puts the networks you heard - including your own - and where you walked on a public map. Don't upload surveys made near a home you want to keep private.
+- Android only allows a few Wi-Fi scans per couple of minutes and needs the Location switch on (Homewatch does not read, save or send your location). Some phones stop background apps to save battery; the app links to the battery settings.
+
+## Install
+- **GitHub Releases**: download the signed APK from the [Releases](../../releases) page.
+- **F-Droid**: submission in progress.
+- Requires Android 8+ and a phone with Bluetooth LE. Tested on a TCL 5087Z (Android 11).
+
+## Permissions
+| Permission | Why |
+|---|---|
+| Bluetooth scan / Nearby devices | Listen for trackers and Remote ID drones |
+| Location | Required by Android 11 and older for Bluetooth/Wi-Fi scanning; used on request for your home position and survey walks. Never uploaded |
+| Nearby Wi-Fi devices (Android 13+) | Scan Wi-Fi networks |
+| Foreground service, notifications, vibrate | Keep scanning in the background; soft chime/vibrate alerts (never a voice) |
+
+No internet permission. See [PRIVACY.md](PRIVACY.md).
 
 ## Build
-JDK 17 + Android SDK (platform 35). `./gradlew assembleDebug testDebugUnitTest`, then `adb install -r app/build/outputs/apk/debug/app-debug.apk`.
+JDK 17 + Android SDK 35: `./gradlew assembleDebug testDebugUnitTest` (49 JUnit tests over the radio parsing and detection logic), then `adb install -r app/build/outputs/apk/debug/app-debug.apk`.
+Release builds read signing details from an untracked `keystore.properties`; without it the release APK is unsigned (which is what F-Droid needs).
 
-MIT licensed. Design notes: [docs/design.md](docs/design.md).
+## Related
+- [homewatch](https://github.com/sloppytopp/homewatch) - the Linux sibling (`pip install homewatch`) with the same detection, plus RTL-SDR support.
+
+## Contributing, security, license
+See [CONTRIBUTING.md](CONTRIBUTING.md) and [SECURITY.md](SECURITY.md). Design notes: [docs/design.md](docs/design.md). MIT licensed.

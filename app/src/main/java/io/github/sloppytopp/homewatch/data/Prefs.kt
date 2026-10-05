@@ -20,6 +20,8 @@ object Prefs {
     var night by mutableStateOf(false); private set
     var alertStyle by mutableStateOf(AlertStyle.CHIME); private set
     var home by mutableStateOf<Home?>(null); private set
+    /** What the UI should treat as home: a fictional spot in sample-data mode, otherwise the user's saved home. */
+    val displayHome: Home? get() = if (io.github.sloppytopp.homewatch.scan.Demo.active) io.github.sloppytopp.homewatch.scan.Demo.FAKE_HOME else home
     var mySsids by mutableStateOf<Set<String>>(emptySet()); private set
     var welcomed by mutableStateOf(false); private set
     var myDevices by mutableStateOf<Set<String>>(emptySet()); private set

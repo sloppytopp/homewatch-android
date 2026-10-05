@@ -74,14 +74,16 @@ private fun worst(s: Snapshot): DLevel = listOf(s.drone.level, s.tracker.level, 
 fun LiveBanner(s: Snapshot) {
     val now = rememberNow()
     val lvl = if (!s.running) DLevel.OFF else worst(s)
-    val (head, accentLevel) = when {
+    val (head0, accentLevel) = when {
         !s.running -> "Not scanning" to Level.OFF
         lvl == DLevel.ALERT -> "Needs your attention" to Level.ALERT
         lvl == DLevel.WATCH -> "Keeping an eye on something" to Level.WATCH
         else -> "All clear" to Level.OK
     }
+    val head = if (s.demo) "SAMPLE DATA - $head0" else head0
     val sub = if (!s.running) "Tap Start scanning to check what's around you."
     else buildString {
+        append(if (s.demo) "Showing made-up sightings, nothing real is scanned  ·  " else "")
         append("Scanning for ${ago(now - s.startedAt)}")
         append("  ·  Wi-Fi: ${s.wifi.size} networks")
         if (s.wifiAt > 0) append(" (scanned ${ago(now - s.wifiAt)} ago)")
