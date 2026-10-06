@@ -20,6 +20,8 @@ object Follow {
     const val MIN_SPAN_MS = 30 * 60_000L
     const val MIN_SIGHTS_PER_PLACE = 2
     const val SAME_PLACE = 0.50      // share of a fingerprint's networks that must already belong to the place
+    const val REGULAR_SHARE = 0.15   // a network describes a place only if heard in this share of the scans there
+    const val BOOTSTRAP = 12         // a new place trusts every network for its first scans
     const val MIN_NETWORKS = 2       // a fingerprint of 0-1 networks says too little about where you are
 
     fun fingerprint(obs: List<WifiObs>): Set<String> =
@@ -28,19 +30,28 @@ object Follow {
     private fun hash(s: String): String =
         MessageDigest.getInstance("SHA-1").digest(s.uppercase().toByteArray()).take(4).joinToString("") { "%02x".format(it) }
 
-    /** Is [f] (one scan's fingerprint) the place described by [rep] (every network ever seen there)? Subsets count: a scan that only hears 2 of 4 home networks is still home. */
+    /** One place: how often each network was heard there. Only networks heard regularly describe the place, so it cannot grow forever and swallow a whole route. */
+    private class Cluster(f: Set<String>) {
+        val counts = HashMap<String, Int>().also { m -> f.forEach { m[it] = 1 } }
+        var n = 1
+        fun add(f: Set<String>) { f.forEach { counts[it] = (counts[it] ?: 0) + 1 }; n++ }
+        /** Early on every network counts; later only those heard in at least [REGULAR_SHARE] of the scans here (and at least twice). */
+        fun rep(): Set<String> = if (n < BOOTSTRAP) counts.keys else counts.filter { it.value >= 2 && it.value.toDouble() / n >= REGULAR_SHARE }.keys
+    }
+
+    /** Does [f] (one scan's fingerprint) belong to the place described by [rep]? A scan that hears only some of the place's networks still belongs. */
     fun same(rep: Set<String>, f: Set<String>): Boolean {
         if (rep.isEmpty() || f.size < MIN_NETWORKS) return false
         return f.intersect(rep).size.toDouble() / f.size >= SAME_PLACE
     }
 
-    /** Group sightings into numbered places (in order first visited). Too-thin fingerprints get place -1. A place remembers every network heard there, so flicker at one spot stays one place. */
+    /** Group sightings into numbered places (in order first visited). Too-thin fingerprints get place -1. */
     fun placeNumbers(sights: List<Sight>): List<Int> {
-        val reps = ArrayList<MutableSet<String>>()
+        val clusters = ArrayList<Cluster>()
         return sights.map { s ->
             if (s.place.size < MIN_NETWORKS) -1 else {
-                val i = reps.indexOfFirst { same(it, s.place) }
-                if (i >= 0) { reps[i] += s.place; i + 1 } else { reps += s.place.toMutableSet(); reps.size }
+                val i = clusters.indexOfFirst { same(it.rep(), s.place) }
+                if (i >= 0) { clusters[i].add(s.place); i + 1 } else { clusters += Cluster(s.place); clusters.size }
             }
         }
     }

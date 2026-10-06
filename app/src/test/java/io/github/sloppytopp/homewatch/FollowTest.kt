@@ -64,8 +64,17 @@ class FollowTest {
         val a = "a1"; val b = "a2"; val c = "a3"; val d = "a4"
         val variants = listOf(place(a, b, c, d), place(b, a, d), place(a, b), place(c, d), place(b, c, d), place(a, c, d), place(d, a), place(c, b))
         val sights = (0 until 300).map { i -> s(i.toLong() * 1, "T", variants[(i * 7) % variants.size]) }
-        assertTrue(Follow.placeNumbers(sights).all { it == 1 })
         assertTrue(Follow.analyze(sights).isEmpty())
+        assertTrue(Follow.placeNumbers(sights).toSet().size <= 2)
+    }
+
+    /** Regression (review finding): a route where each stretch overlaps the last must not collapse into one ever-growing "place". */
+    @Test fun slowRouteWithOverlappingNetworksStillSplitsIntoPlaces() {
+        // every network is heard for ~4 scans, a new one enters as the oldest leaves: consecutive scans always overlap by 3 of 4
+        val route = (0 until 240).map { i -> s(i.toLong(), "T", (i / 4 until i / 4 + 4).map { "n$it" }.toSet()) }
+        val places = Follow.placeNumbers(route).filter { it > 0 }.toSet()
+        assertTrue("route collapsed into $places", places.size >= 3)
+        assertEquals(1, Follow.analyze(route).size)
     }
 
     @Test fun fingerprintHashesAndKeepsStrongest() {
