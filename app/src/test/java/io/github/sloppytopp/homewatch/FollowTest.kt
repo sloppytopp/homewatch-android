@@ -49,12 +49,23 @@ class FollowTest {
     @Test fun slightlyDifferentWifiViewIsStillTheSamePlace() {
         val homeLater = place("a1", "a2", "a3", "zz")
         assertTrue(Follow.same(home, homeLater))
+        assertTrue(Follow.same(home, place("a2", "a4")))      // a subset of the home networks is still home
         assertFalse(Follow.same(home, work))
     }
 
     @Test fun noWifiMeansNoPlace() {
         assertFalse(Follow.same(emptySet(), emptySet()))
         assertEquals(listOf(-1), Follow.placeNumbers(listOf(s(0, "T", emptySet()))))
+        assertEquals(listOf(-1), Follow.placeNumbers(listOf(s(0, "T", place("a1")))))   // one network is too little to say where you are
+    }
+
+    /** Regression: a phone sitting at home all night heard a few weak networks in changing combinations; that is ONE place, not four. */
+    @Test fun flickeringHomeScansAreOnePlaceNotFollowing() {
+        val a = "a1"; val b = "a2"; val c = "a3"; val d = "a4"
+        val variants = listOf(place(a, b, c, d), place(b, a, d), place(a, b), place(c, d), place(b, c, d), place(a, c, d), place(d, a), place(c, b))
+        val sights = (0 until 300).map { i -> s(i.toLong() * 1, "T", variants[(i * 7) % variants.size]) }
+        assertTrue(Follow.placeNumbers(sights).all { it == 1 })
+        assertTrue(Follow.analyze(sights).isEmpty())
     }
 
     @Test fun fingerprintHashesAndKeepsStrongest() {

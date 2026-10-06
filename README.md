@@ -48,7 +48,7 @@ Only use the official sources below. Other "APK sites" can host modified copies,
 
 | Source | How |
 |---|---|
-| **GitHub Releases** (official) | Download `homewatch-<version>.apk` from the [latest release](../../releases/latest) |
+| **GitHub Releases** (official) | Download `n0rma-<version>.apk` from the [latest release](../../releases/latest) |
 | **Obtainium** (auto-updates from GitHub) | [Add N0RMA to Obtainium](https://apps.obtainium.imranr.dev/redirect?r=obtainium://add/https://github.com/sloppytopp/n0rma-android) - or in Obtainium tap **Add App** and paste `https://github.com/sloppytopp/n0rma-android` |
 | **F-Droid** | [merge request open](https://gitlab.com/fdroid/fdroiddata/-/merge_requests/51294) (under review) |
 
@@ -57,8 +57,8 @@ Requires Android 8+ and a phone with Bluetooth LE. Tested on a TCL 5087Z (Androi
 ### Verify your download
 Each release lists two values you can check:
 ```
-sha256sum -c homewatch-<version>.apk.sha256                 # file is intact
-apksigner verify --print-certs homewatch-<version>.apk      # signer must match the fingerprint below
+sha256sum -c n0rma-<version>.apk.sha256                 # file is intact
+apksigner verify --print-certs n0rma-<version>.apk      # signer must match the fingerprint below
 ```
 Official signing certificate SHA-256:
 `ba208cc13101a7c8d4e8fa4d8016e5b333bd522d64c71d2a723179410f049c22`

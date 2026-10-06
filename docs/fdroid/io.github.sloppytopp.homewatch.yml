@@ -13,7 +13,7 @@ AutoName: N0RMA
 RepoType: git
 Repo: https://github.com/sloppytopp/n0rma-android
 Binaries: 
-  https://github.com/sloppytopp/n0rma-android/releases/download/v%v/homewatch-%v.apk
+  https://github.com/sloppytopp/n0rma-android/releases/download/v%v/n0rma-%v.apk
 
 Builds:
   - versionName: 0.6.0

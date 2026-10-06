@@ -26,14 +26,14 @@ fun StalkerCard() {
     var r by remember { mutableStateOf<StalkerResult?>(null) }
     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
         Text("Check this phone for stalkerware", color = UiColors.text, fontSize = 16.sp)
-        Text("Compares your installed apps to the public Coalition Against Stalkerware list (bundled in the app, CC BY 4.0, nothing is uploaded) and lists non-system apps with accessibility, notification or device-admin power. " +
+        Text("Looks for apps from the public Coalition Against Stalkerware list (bundled in the app, CC BY 4.0, nothing is uploaded) and lists apps with accessibility, notification or device-admin power. " +
             "A clean result is not a guarantee: renamed or custom spyware won't match.", color = UiColors.dim, fontSize = 12.sp)
         Button(
             onClick = { r = StalkerScan.run(ctx) }, modifier = Modifier.fillMaxWidth(),
             colors = ButtonDefaults.buttonColors(containerColor = UiColors.buttonBg, contentColor = UiColors.buttonFg),
         ) { Text("Scan installed apps") }
         r?.let { res ->
-            Text("Checked ${res.scanned} apps against ${Stalkerware.indicators.size} known stalkerware packages (list ${res.listVersion}).", color = UiColors.dim, fontSize = 12.sp)
+            Text("Checked this phone against ${Stalkerware.indicators.size} known stalkerware packages (list ${res.listVersion}).", color = UiColors.dim, fontSize = 12.sp)
             if (res.hits.isEmpty()) Text("✓ No known stalkerware package found.", color = UiColors.good, fontSize = 13.sp)
             else {
                 Text("▲ Possible stalkerware found:", color = Level.ALERT.accentC(), fontSize = 14.sp)
