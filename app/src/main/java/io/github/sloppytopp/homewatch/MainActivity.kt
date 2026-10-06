@@ -255,7 +255,7 @@ private fun StatusScreen() {
     fun flagged(l: io.github.sloppytopp.homewatch.detect.Level) = l == io.github.sloppytopp.homewatch.detect.Level.WATCH || l == io.github.sloppytopp.homewatch.detect.Level.ALERT
     StatusTile("Drone near the house?", lv(s.drone.level), s.drone.message, if (flagged(s.drone.level)) ({ Monitor.hunt = "drone" }) else null)
     StatusTile("Active tracker present?", lv(s.tracker.level), s.tracker.message, if (flagged(s.tracker.level)) ({ Monitor.hunt = "tracker" }) else null)
-    StatusTile("Hidden camera / unknown device?", lv(s.camera.level), s.camera.message, if (flagged(s.camera.level)) ({ Monitor.hunt = "camera" }) else null)
+    StatusTile("Unknown device?", lv(s.camera.level), s.camera.message, if (flagged(s.camera.level)) ({ Monitor.hunt = "camera" }) else null)
     StatusTile("Elevated RF / EMF? (RTL-SDR)", lv(s.rf.level), s.rf.message)
 
     if (s.running) {
