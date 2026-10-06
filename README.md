@@ -82,4 +82,4 @@ Release builds read signing details from an untracked `keystore.properties`; wit
 - [homewatch](https://github.com/sloppytopp/homewatch) - the Linux sibling (`pip install homewatch`) with the same detection, plus RTL-SDR support.
 
 ## Contributing, security, license
-See [CONTRIBUTING.md](CONTRIBUTING.md) and [SECURITY.md](SECURITY.md). Design notes: [docs/design.md](docs/design.md). MIT licensed.
+See [CONTRIBUTING.md](CONTRIBUTING.md) and [SECURITY.md](SECURITY.md). How it works and what it cannot do: [docs/METHODOLOGY.md](docs/METHODOLOGY.md). Design notes: [docs/design.md](docs/design.md). MIT licensed.

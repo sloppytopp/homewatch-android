@@ -18,6 +18,9 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.layout.Arrangement
@@ -155,7 +158,12 @@ private fun Root() {
         Row(Modifier.fillMaxWidth().padding(horizontal = 4.dp), horizontalArrangement = Arrangement.SpaceBetween) {
             listOf("Status", "Nearby", "Rooms", "Radar", "History", "Settings").forEachIndexed { i, name ->
                 TextButton(onClick = { tab = i }, contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 6.dp)) {
-                    Text(name, color = if (tab == i) UiColors.text else UiColors.faint, fontSize = if (tab == i) 14.sp else 12.sp)
+                    Column(horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally) {
+                        Text(name, color = if (tab == i) UiColors.text else UiColors.faint, fontSize = 13.sp,
+                            fontWeight = if (tab == i) androidx.compose.ui.text.font.FontWeight.SemiBold else androidx.compose.ui.text.font.FontWeight.Normal)
+                        // underline marks the open tab; the text size no longer changes, so the row stops shifting
+                        Box(Modifier.padding(top = 2.dp).height(2.dp).width(if (tab == i) 18.dp else 0.dp).background(UiColors.good))
+                    }
                 }
             }
         }

@@ -86,7 +86,7 @@ fun LiveBanner(s: Snapshot) {
         append(if (s.demo) "Showing made-up sightings, nothing real is scanned  ·  " else "")
         append("Scanning for ${ago(now - s.startedAt)}")
         append("  ·  Wi-Fi: ${s.wifi.size} networks")
-        if (s.wifiAt > 0) append(" (scanned ${ago(now - s.wifiAt)} ago)")
+        if (s.wifiAt > 0 && now - s.wifiAt > 90_000) append(" (last scan ${ago(now - s.wifiAt)} ago)")
         append("  ·  Bluetooth: ${s.adsSeen} signals heard")
     }
     Row(
