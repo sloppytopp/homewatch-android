@@ -45,6 +45,7 @@ class Engine(
     private val eventSink: (EventRow) -> Unit = {},
     private val isMine: (String) -> Boolean = { false },
     private val trailSink: (Sight) -> Unit = {},
+    private val netSink: (List<String>) -> Unit = {},
 ) {
     private class Sighting(val kind: Kind, val label: String, val first: Long) {
         var last = first
@@ -59,6 +60,8 @@ class Engine(
     private val sightings = HashMap<String, Sighting>()
     private val events = ArrayDeque<EventRow>()
     private val lastEmit = HashMap<String, Long>()
+    private val knownNets = HashSet<String>()   // Wi-Fi BSSIDs seen before; a new one is logged once
+    private var netsLoaded = false
     private val trail = ArrayList<Sight>()
     private val lastTrail = HashMap<String, Long>()
     private var placeFp: Set<String> = emptySet()
@@ -117,6 +120,9 @@ class Engine(
 
     @Synchronized fun clearInspect() { inspect.clear() }
 
+    /** Load the BSSIDs seen on earlier runs. An empty set means "learn the neighbourhood silently on the first scan". */
+    @Synchronized fun loadKnownNets(saved: Set<String>) { knownNets.clear(); knownNets += saved; netsLoaded = true }
+
     /** Reload saved tracker sightings (so following detection survives an app restart). */
     @Synchronized fun loadTrail(saved: List<Sight>) { trail.clear(); trail += saved; followAt = 0 }
 
@@ -142,6 +148,18 @@ class Engine(
             }
             if (!ridFound && klass == "drone") drones += WifiHit(row, null, "drone-like network ($vendor)")
             if (klass == "camera") cams += WifiHit(row, null, "camera-like network")
+        }
+        if (!demoMode && netsLoaded) {
+            val firstEver = knownNets.isEmpty()
+            val added = rows.filter { knownNets.add(it.bssid) }
+            if (added.isNotEmpty()) {
+                if (!firstEver) added.filter { it.level >= -80 }.sortedByDescending { it.level }.take(3).forEach {
+                    emit("network", Level.OK, "newnet:${it.bssid}", "New Wi-Fi network appeared: '${it.ssid}' ${it.bssid}" +
+                        (if (it.vendor.isNotEmpty()) " ${it.vendor}" else "") + " ${it.level} dBm", 0, wifiAt)
+                }
+                if (knownNets.size > MAX_KNOWN_NETS) knownNets.clear()   // runaway guard (e.g. a long drive): relearn
+                netSink(added.map { it.bssid })
+            }
         }
         wifiRows = rows.sortedByDescending { it.level }
         wifiDrones = drones
@@ -289,6 +307,7 @@ class Engine(
         const val FORGET_MS = 3_600_000L    // forgotten entirely after 1 h
         const val WIFI_FRESH_MS = 180_000L  // a Wi-Fi scan counts for 3 min
         const val MAX_EVENTS = 200
+        const val MAX_KNOWN_NETS = 5000
         const val TRAIL_EVERY_MS = 60_000L
         const val MAX_TRAIL = 6000
         val COMPANIES = mapOf(

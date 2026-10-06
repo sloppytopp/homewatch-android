@@ -17,16 +17,36 @@ object Store {
     private const val KEEP_DAYS = 30
 
     fun init(ctx: Context) {
-        helper = object : SQLiteOpenHelper(ctx, "homewatch.db", null, 4) {
+        helper = object : SQLiteOpenHelper(ctx, "homewatch.db", null, 5) {
             override fun onCreate(db: SQLiteDatabase) {
                 db.execSQL("CREATE TABLE events(id INTEGER PRIMARY KEY, ts INTEGER, domain TEXT, level TEXT, msg TEXT)")
                 db.execSQL("CREATE TABLE beeps(id INTEGER PRIMARY KEY, ts INTEGER)")
                 db.execSQL("CREATE INDEX ev_ts ON events(ts)")
-                createRoomTables(db); createSurveyTable(db); createTrailTable(db)
+                createRoomTables(db); createSurveyTable(db); createTrailTable(db); createKnownNetTable(db)
             }
-            override fun onUpgrade(db: SQLiteDatabase, o: Int, n: Int) { if (o < 2) createRoomTables(db); if (o < 3) createSurveyTable(db); if (o < 4) createTrailTable(db) }
+            override fun onUpgrade(db: SQLiteDatabase, o: Int, n: Int) { if (o < 2) createRoomTables(db); if (o < 3) createSurveyTable(db); if (o < 4) createTrailTable(db); if (o < 5) createKnownNetTable(db) }
         }
         prune()
+    }
+
+    private fun createKnownNetTable(db: SQLiteDatabase) {
+        db.execSQL("CREATE TABLE IF NOT EXISTS known_net(bssid TEXT PRIMARY KEY, ts INTEGER)")
+    }
+
+    @Synchronized fun addKnownNets(bssids: List<String>) {
+        val db = helper.writableDatabase
+        db.beginTransaction()
+        try {
+            val now = System.currentTimeMillis()
+            bssids.forEach { db.insertWithOnConflict("known_net", null, ContentValues().apply { put("bssid", it); put("ts", now) }, SQLiteDatabase.CONFLICT_IGNORE) }
+            db.setTransactionSuccessful()
+        } finally { db.endTransaction() }
+    }
+
+    @Synchronized fun knownNets(): Set<String> {
+        val out = HashSet<String>()
+        helper.readableDatabase.rawQuery("SELECT bssid FROM known_net", null).use { while (it.moveToNext()) out += it.getString(0) }
+        return out
     }
 
     private fun createTrailTable(db: SQLiteDatabase) {
@@ -154,6 +174,7 @@ object Store {
         helper.writableDatabase.delete("beeps", "ts<?", arrayOf("$cutoff"))
         helper.writableDatabase.delete("survey", "ts<?", arrayOf("$cutoff"))
         helper.writableDatabase.delete("trail", "ts<?", arrayOf("$cutoff"))
+        helper.writableDatabase.delete("known_net", "ts<?", arrayOf("${System.currentTimeMillis() - 90 * 86_400_000L}"))
     }
 
     @Synchronized fun clearAll() {
@@ -163,5 +184,6 @@ object Store {
         helper.writableDatabase.delete("room_scan", null, null)
         helper.writableDatabase.delete("survey", null, null)
         helper.writableDatabase.delete("trail", null, null)
+        helper.writableDatabase.delete("known_net", null, null)
     }
 }

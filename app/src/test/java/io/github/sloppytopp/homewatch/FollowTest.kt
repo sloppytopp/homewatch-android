@@ -156,3 +156,33 @@ class StalkerwareTest {
         assertEquals(listOf("b", "a"), Stalkerware.rank(listOf(a, b)).map { it.pkg })
     }
 }
+
+class NewNetworkTest {
+    private fun scan(vararg macs: String) = macs.mapIndexed { i, m -> WifiObs(m, "net$i", -50 - i) }
+
+    @Test fun firstScanLearnsSilentlyThenNewNetworkIsLogged() {
+        var now = 1_000_000L
+        val saved = ArrayList<String>()
+        val e = Engine(clock = { now }, netSink = { saved += it })
+        e.running = true; e.wifiEnabled = true
+        e.loadKnownNets(emptySet())
+        e.onWifiScan(scan("AA:00:00:00:00:01", "AA:00:00:00:00:02"))
+        assertTrue(e.snapshot().events.none { it.msg.contains("New Wi-Fi") })
+        assertEquals(2, saved.size)
+        now += 60_000
+        e.onWifiScan(scan("AA:00:00:00:00:01", "AA:00:00:00:00:02", "BB:00:00:00:00:09"))
+        val ev = e.snapshot().events.filter { it.msg.contains("New Wi-Fi network appeared") }
+        assertEquals(1, ev.size)
+        assertTrue(ev[0].msg.contains("BB:00:00:00:00:09"))
+        now += 60_000
+        e.onWifiScan(scan("BB:00:00:00:00:09"))   // already known: no repeat
+        assertEquals(1, e.snapshot().events.count { it.msg.contains("New Wi-Fi network appeared") })
+    }
+
+    @Test fun neverLoadedMeansNoNewNetworkEvents() {
+        val e = Engine(clock = { 5_000_000L })
+        e.running = true; e.wifiEnabled = true
+        e.onWifiScan(scan("AA:00:00:00:00:01")); e.onWifiScan(scan("AA:00:00:00:00:01", "CC:00:00:00:00:01"))
+        assertTrue(e.snapshot().events.isEmpty())
+    }
+}
