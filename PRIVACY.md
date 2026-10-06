@@ -27,4 +27,4 @@ _Last updated: 2026-10-05_
 N0RMA is not directed at children and collects no personal information from anyone.
 
 ## Changes and contact
-Changes to this policy will be committed to this repository. Questions: open an issue at https://github.com/sloppytopp/homewatch-android/issues.
+Changes to this policy will be committed to this repository. Questions: open an issue at https://github.com/sloppytopp/n0rma-android/issues.

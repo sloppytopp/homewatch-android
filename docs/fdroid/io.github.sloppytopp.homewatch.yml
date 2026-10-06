@@ -4,16 +4,16 @@ Categories:
 License: MIT
 AuthorName: Ryan Davis
 AuthorWebSite: https://github.com/sloppytopp
-SourceCode: https://github.com/sloppytopp/homewatch-android
-IssueTracker: https://github.com/sloppytopp/homewatch-android/issues
-Changelog: https://github.com/sloppytopp/homewatch-android/blob/HEAD/CHANGELOG.md
+SourceCode: https://github.com/sloppytopp/n0rma-android
+IssueTracker: https://github.com/sloppytopp/n0rma-android/issues
+Changelog: https://github.com/sloppytopp/n0rma-android/blob/HEAD/CHANGELOG.md
 
 AutoName: N0RMA
 
 RepoType: git
-Repo: https://github.com/sloppytopp/homewatch-android
+Repo: https://github.com/sloppytopp/n0rma-android
 Binaries: 
-  https://github.com/sloppytopp/homewatch-android/releases/download/v%v/homewatch-%v.apk
+  https://github.com/sloppytopp/n0rma-android/releases/download/v%v/homewatch-%v.apk
 
 Builds:
   - versionName: 0.6.0

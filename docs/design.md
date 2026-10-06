@@ -2,7 +2,7 @@
 
 **Goal:** a standalone, detect-only Android app that gives someone an honest answer to "is anything near my home
 tracking or watching me?" using the phone's own Bluetooth and Wi-Fi radios. No account, no cloud, no analytics.
-Sister project of github.com/sloppytopp/homewatch (Linux, MIT). Never jams/spoofs/transmits.
+Sister project of github.com/sloppytopp/n0rma (Linux, MIT). Never jams/spoofs/transmits.
 
 ## Platform
 Test device: TCL 5087Z, Android 11 (API 30), arm64, BLE yes, no Wi-Fi Aware; OEM power manager kills background apps ("Restrict") -> needs foreground service + battery-optimization exemption prompt. Toolchain installed locally: JDK 17 (~/jdk), Android SDK (~/Android/Sdk), platform 35.

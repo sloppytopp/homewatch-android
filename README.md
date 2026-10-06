@@ -49,7 +49,7 @@ Only use the official sources below. Other "APK sites" can host modified copies,
 | Source | How |
 |---|---|
 | **GitHub Releases** (official) | Download `homewatch-<version>.apk` from the [latest release](../../releases/latest) |
-| **Obtainium** (auto-updates from GitHub) | [Add N0RMA to Obtainium](https://apps.obtainium.imranr.dev/redirect?r=obtainium://add/https://github.com/sloppytopp/homewatch-android) - or in Obtainium tap **Add App** and paste `https://github.com/sloppytopp/homewatch-android` |
+| **Obtainium** (auto-updates from GitHub) | [Add N0RMA to Obtainium](https://apps.obtainium.imranr.dev/redirect?r=obtainium://add/https://github.com/sloppytopp/n0rma-android) - or in Obtainium tap **Add App** and paste `https://github.com/sloppytopp/n0rma-android` |
 | **F-Droid** | [merge request open](https://gitlab.com/fdroid/fdroiddata/-/merge_requests/51294) (under review) |
 
 Requires Android 8+ and a phone with Bluetooth LE. Tested on a TCL 5087Z (Android 11). After installing, tap **Try it with sample data** to see every screen work before trusting it with anything real.
@@ -79,7 +79,7 @@ JDK 17 + Android SDK 35: `./gradlew assembleDebug testDebugUnitTest` (49 JUnit t
 Release builds read signing details from an untracked `keystore.properties`; without it the release APK is unsigned (which is what F-Droid needs).
 
 ## Related
-- [homewatch](https://github.com/sloppytopp/homewatch) - the Linux sibling (`pip install homewatch`) with the same detection, plus RTL-SDR support.
+- [n0rma](https://github.com/sloppytopp/n0rma) - the Linux sibling (`pip install n0rma`) with the same detection, plus RTL-SDR support.
 
 ## Contributing, security, license
 See [CONTRIBUTING.md](CONTRIBUTING.md) and [SECURITY.md](SECURITY.md). How it works and what it cannot do: [docs/METHODOLOGY.md](docs/METHODOLOGY.md). Design notes: [docs/design.md](docs/design.md). MIT licensed.
