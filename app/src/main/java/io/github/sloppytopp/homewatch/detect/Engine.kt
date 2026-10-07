@@ -248,7 +248,7 @@ class Engine(
             DomainState(lvl, msg)
         } else DomainState(Level.OK, "No unknown trackers in range ($adsSeen Bluetooth ads heard, $ambient normal Apple devices ignored" +
             (if (mineCount > 0) ", $mineCount of your own trackers" else "") + ")")
-        if (trackerState.level == Level.ALERT && lastTrackerLevel != Level.ALERT) alert("tracker", if (following.isNotEmpty()) "A tracker has followed you across several places." else "A tracker has stayed close to the house.")
+        if (trackerState.level == Level.ALERT && lastTrackerLevel != Level.ALERT) alert("tracker", if (following.isNotEmpty()) "A tracker has followed you across several places." else "A tracker has stayed close to you.")
         lastTrackerLevel = trackerState.level
 
         // ---- camera-like Wi-Fi sources (spy cams often broadcast their own network)
