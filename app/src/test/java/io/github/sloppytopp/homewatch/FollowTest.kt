@@ -212,4 +212,11 @@ class NewNetworkTest {
         assertTrue(Evidence.verify(linux))
         assertFalse(Evidence.verify(linux.replace("rssi=-71", "rssi=-99")))
     }
+
+    @Test fun textAddedAfterTheChainFailsVerification() {
+        val r = Evidence.build(5_000_000, listOf(EventRow(1_000_000, "tracker", Level.ALERT, "Tile persistent")), emptyList(), emptyList(), java.util.TimeZone.getTimeZone("UTC"))
+        assertTrue(Evidence.verify(r))
+        assertFalse(Evidence.verify(r + "NOTE: everything above is fine.\n"))
+        assertFalse(Evidence.verify(r.replace("fixes the time and content.", "is optional.")))
+    }
 }

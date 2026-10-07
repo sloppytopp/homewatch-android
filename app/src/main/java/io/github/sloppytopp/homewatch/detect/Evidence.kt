@@ -12,6 +12,7 @@ import java.util.TimeZone
  * That shows the text was not edited AFTER export. It cannot prove who made it: for that, send the final chain hash to someone you trust right away.
  */
 object Evidence {
+    private const val ADVICE = "To keep this tamper-evident, email or text the CHAIN END value to yourself or an advocate right now: it fixes the time and content."
     private const val VERSION = "homewatch-evidence-v1"
 
     private fun sha(s: String) = MessageDigest.getInstance("SHA-256").digest(s.toByteArray()).joinToString("") { "%02x".format(it) }
@@ -54,7 +55,7 @@ object Evidence {
         out.appendLine()
         out.appendLine("CHAIN START: ${start0.take(12)}  (generated-at ${nowMs} ms)")
         out.appendLine("CHAIN END (final hash): $h")
-        out.appendLine("To keep this tamper-evident, email or text the CHAIN END value to yourself or an advocate right now: it fixes the time and content.")
+        out.appendLine(ADVICE)
         return out.toString()
     }
 
@@ -70,13 +71,16 @@ object Evidence {
         val body = lines.take(start).joinToString("\n") + "\n"
         var h = sha("$VERSION|$ms|${sha(body)}")
         if (gen.removePrefix("CHAIN START:").trim().take(12) != h.take(12)) return false
-        for (l in lines.drop(start + 1)) {
-            if (l.isBlank()) break
+        var i = start + 1
+        while (i < lines.size && lines[i].isNotBlank()) {
+            val l = lines[i]
             val cut = l.lastIndexOf(" | ")
             if (cut < 0) return false
             h = sha("$h|${l.substring(0, cut)}")
             if (l.substring(cut + 3).trim() != h.take(12)) return false
+            i++
         }
-        return h == end
+        // nothing may follow the chain except the exact footer, or text added at the end would still read as "verified"
+        return h == end && lines.drop(i) == listOf("", gen, "CHAIN END (final hash): $end", ADVICE, "")
     }
 }
