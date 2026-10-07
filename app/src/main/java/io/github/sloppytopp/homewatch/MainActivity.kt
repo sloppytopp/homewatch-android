@@ -138,6 +138,7 @@ class MainActivity : ComponentActivity() {
 @Composable
 private fun Root() {
     var tab by rememberSaveable { mutableIntStateOf(0) }
+    androidx.compose.runtime.LaunchedEffect(Monitor.requestTab) { Monitor.requestTab?.let { tab = it; Monitor.requestTab = null } }
     val ctx0 = LocalContext.current
     androidx.compose.runtime.LaunchedEffect(Prefs.discreet) {
         val w = (ctx0 as? Activity)?.window

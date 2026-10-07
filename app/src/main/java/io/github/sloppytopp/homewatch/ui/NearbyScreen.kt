@@ -124,16 +124,19 @@ fun NearbyScreen() {
                 Column(verticalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.verticalScroll(rememberScrollState())) {
                     Text("MAC (BSSID): ${w.bssid}\nMaker: ${w.vendor.ifEmpty { "unknown" }}\nSignal: ${w.level} dBm\nSecurity: ${w.caps.ifEmpty { "unknown" }}" +
                         (if (w.klass == "camera" || w.klass == "drone") "\nLooks like a ${w.klass} (by name or maker)" else ""), fontSize = 13.sp)
-                    Text("Is it new here? WiGLE is a public database of Wi-Fi networks. A network that has been at this spot for years is probably a long-standing neighbor; one WiGLE has never seen near you is worth a closer look. " +
-                        "Tapping below copies the MAC and opens wigle.net in your browser - N0RMA itself sends nothing.", fontSize = 12.sp)
-                    TextButton(onClick = {
-                        val cm = ctx.getSystemService(Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
-                        cm.setPrimaryClip(android.content.ClipData.newPlainText("MAC", w.bssid))
-                        try { ctx.startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse("https://wigle.net/")).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)) } catch (_: Exception) {}
-                    }) { Text("Copy the MAC and open WiGLE") }
+                    Text("Where is it? Two in-house ways to find out, using only this phone's own radio - no account, nothing sent anywhere:", fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                    TextButton(onClick = { wifiDetail = null; finding = "wifi:${w.bssid}" to w.ssid }) { Text("Find it now (hot/cold, right here)") }
+                    TextButton(onClick = { Monitor.requestTab = 3; wifiDetail = null }) { Text("Walk a Survey -> real position + Google Earth pin") }
                     TextButton(onClick = { if (mine) Prefs.forgetSsid(w.ssid) else Prefs.learnSsid(w.ssid); wifiDetail = null }) {
                         Text(if (mine) "Not mine - stop showing it as yours" else "This is my network")
                     }
+                    Text("Advanced: WiGLE is a public database of networks other people have logged. A network WiGLE has never seen near you is worth a closer look - but it needs a free WiGLE account, and you " +
+                        "have to paste the MAC into its search box yourself (WiGLE doesn't support filling it in for us). Only worth it once the two options above haven't settled it.", fontSize = 11.sp, color = UiColors.faint)
+                    TextButton(onClick = {
+                        val cm = ctx.getSystemService(Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
+                        cm.setPrimaryClip(android.content.ClipData.newPlainText("MAC", w.bssid))
+                        try { ctx.startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse("https://wigle.net/search")).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)) } catch (_: Exception) {}
+                    }) { Text("Copy MAC and open wigle.net/search", fontSize = 12.sp) }
                 }
             },
             confirmButton = { TextButton(onClick = { wifiDetail = null }) { Text("Close") } },
@@ -155,19 +158,33 @@ internal fun Finder(addr: String, label: String, onClose: () -> Unit) {
     var answer by remember { mutableStateOf<DirectionFinder.Result?>(null) }
     var answered by remember { mutableStateOf(false) }
 
+    val isWifi = addr.startsWith("wifi:")
+    val bssid = addr.removePrefix("wifi:")
+
     fun rssiNow(): Pair<Int?, Long?> {
         val s = Monitor.snapshot
+        if (isWifi) {
+            if (s.wifiAt == 0L) return null to null
+            return s.wifi.firstOrNull { it.bssid.equals(bssid, ignoreCase = true) }?.level to (System.currentTimeMillis() - s.wifiAt) / 1000
+        }
         s.trackers.firstOrNull { it.addr == addr }?.let { return it.rssi to it.agoS }
         s.inspect.firstOrNull { it.addr == addr }?.let { return it.rssi to it.ageS }
         s.drones.firstOrNull { it.addr == addr }?.let { return it.rssi to it.agoS }
         return null to null
     }
 
+    // Wi-Fi scans land roughly every 15-30 s (Android throttles them), not every second like BLE - ask for the faster cadence while this is open.
+    DisposableEffect(isWifi) {
+        val was = Monitor.fastWifi
+        if (isWifi) Monitor.fastWifi = true
+        onDispose { if (isWifi) Monitor.fastWifi = was }
+    }
+
     LaunchedEffect(addr) {
         while (true) {
             Monitor.refresh()
             val (r, age) = rssiNow()
-            if (r != null && age != null && age <= 1) {
+            if (r != null && age != null && age <= (if (isWifi) 40 else 1)) {
                 history.add(r); if (history.size > 12) history.removeAt(0)
                 if (sweeping) finder.add(heading.toDouble(), r)
             }
@@ -188,7 +205,7 @@ internal fun Finder(addr: String, label: String, onClose: () -> Unit) {
                 if (rssi == null) Text("Not heard right now. Wait a few seconds, or move closer.")
                 else {
                     Meter(((rssi + 100) / 60f), "$rssi dBm - " + when { rssi >= -50 -> "very hot: it's right here"; rssi >= -62 -> "hot"; rssi >= -75 -> "warm"; else -> "cold" } +
-                        (age?.let { if (it > 3) " (last heard ${it}s ago)" else "" } ?: ""))
+                        (age?.let { if (it > (if (isWifi) 20 else 3)) " (last scan ${it}s ago)" else "" } ?: ""))
                     Text(when (trend) {
                         "warmer" -> "▲ Getting WARMER - keep going this way."
                         "colder" -> "▼ Getting COLDER - turn around."
@@ -207,6 +224,10 @@ internal fun Finder(addr: String, label: String, onClose: () -> Unit) {
                 TextButton(onClick = { if (mineNow) Prefs.unmarkMine(addr) else Prefs.markMine(addr); Monitor.refresh() }) {
                     Text(if (mineNow) "Marked as YOURS - tap to flag it again" else "This is mine - stop flagging it")
                 }
+                if (isWifi) {
+                    Text("Wi-Fi only refreshes every 15-30 seconds (a phone limit, not ours), so the compass sweep doesn't work well here - use warmer/colder above, or get a real position estimate:", fontSize = 12.sp)
+                    TextButton(onClick = { Monitor.requestTab = 3; onClose() }) { Text("Open Survey walk (Radar tab) -> export to Google Earth") }
+                } else {
                 Text("Compass sweep", fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(top = 6.dp))
                 if (hasCompass) CompassDial(heading, finder, answer?.bearingDeg, compass.accuracy.value <= 1)
                 if (!hasCompass) Text("This phone has no compass sensor, so use the warmer/colder arrow.", fontSize = 12.sp)
@@ -222,6 +243,7 @@ internal fun Finder(addr: String, label: String, onClose: () -> Unit) {
                     }
                     if (answered && answer == null) Text("Not enough readings - turn slower, and make sure the tracker is being heard (it advertises about every 2 seconds).", fontSize = 12.sp)
                     TextButton(onClick = { answered = false; answer = null; finder.let { f -> repeat(0) {} }; sweepAt = System.currentTimeMillis(); sweeping = true; resetFinder(finder) }) { Text(if (answered) "Sweep again" else "Start compass sweep") }
+                }
                 }
                 Text("If you find something you don't own, leave it in place, photograph it, and contact local law enforcement.", fontSize = 11.sp)
             }

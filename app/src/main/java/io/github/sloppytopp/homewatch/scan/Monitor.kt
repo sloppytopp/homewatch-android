@@ -44,4 +44,7 @@ object Monitor {
     /** Which alert the user is currently hunting ("tracker" | "drone" | "camera"), or null. */
     var hunt by mutableStateOf<String?>(null)
 
+    /** Ask the root screen to switch tabs (0 Status .. 5 Settings), e.g. "go set up a survey walk for this". Consumed once, then cleared. */
+    var requestTab by mutableStateOf<Int?>(null)
+
 }
