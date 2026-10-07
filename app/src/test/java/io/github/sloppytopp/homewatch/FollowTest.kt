@@ -205,4 +205,11 @@ class NewNetworkTest {
         e.onWifiScan(scan("AA:00:00:00:00:01")); e.onWifiScan(scan("AA:00:00:00:00:01", "CC:00:00:00:00:01"))
         assertTrue(e.snapshot().events.isEmpty())
     }
+
+    /** A report produced by the Linux tool (n0rma evidence) must verify here too, and fail when edited. */
+    @Test fun reportFromTheLinuxToolVerifies() {
+        val linux = "N0RMA EVIDENCE REPORT\nGenerated: 1970-02-27 15:53:20 EST\n\nSUMMARY (plain language)\n- This report lists what this computer's Bluetooth, Wi-Fi and network checks saw: nearby trackers, drone broadcasts and new or unknown devices.\n- 2 watch/alert events are listed below, from 1970-01-12 08:46:40 EST to 1970-01-23 22:33:20 EST.\n- Limits: this is signal evidence, not proof of who placed a device. A computer stays in one place, so this report cannot show a tracker following you. Cellular/GPS trackers cannot be heard. Remote ID drone broadcasts can be faked.\n\nEVENT LOG  (line number | time | level | area | detail | chained hash)\n0001 | 1970-01-12 08:46:40 EST | watch | tracker | Tile nearby rssi=-71 | 4bdda4f3b786\n0002 | 1970-01-23 22:33:20 EST | alert | tracker | Tile persistent | 35031361394e\n\nCHAIN START: 5caaefd8bfa6  (generated-at 5000000000 ms)\nCHAIN END (final hash): 35031361394eb4a7ac6178b97699d8bdfdae6c2999c3e753d725edc326b00799\nTo keep this tamper-evident, email or text the CHAIN END value to yourself or an advocate right now: it fixes the time and content.\n"
+        assertTrue(Evidence.verify(linux))
+        assertFalse(Evidence.verify(linux.replace("rssi=-71", "rssi=-99")))
+    }
 }
