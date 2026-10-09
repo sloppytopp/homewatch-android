@@ -151,6 +151,22 @@ class WifiTest {
         e.onWifiScan(listOf(WifiObs("aa:bb:cc:00:00:02", "Cams", -92)))
         assertEquals(Level.WATCH, e.snapshot().camera.level)
     }
+    @Test fun sisterNetworksFromOneRadioLogOnce() {
+        val e = engine(); t = 1_700_000_000_000L   // a real-looking clock: emit's cooldown counts from 0
+        repeat(6) { t += 40 * 60_000L; e.onWifiScan(listOf(WifiObs("e0:b2:60:41:b1:79", "Cams", -88), WifiObs("e0:b2:60:41:b1:89", "Cams", -90))); e.snapshot() }
+        assertEquals(1, e.snapshot().events.count { it.domain == "camera" })   // 4 h, two sister BSSIDs: still one entry
+    }
+    @Test fun markedCameraSourceIsNotFlagged() {
+        val mine = setOf("wifi:e0:b2:60:41:b1")
+        val e = Engine({ t }, { _, _ -> }, isMine = { it in mine }).also { it.running = true; it.wifiEnabled = true }
+        e.onWifiScan(listOf(WifiObs("e0:b2:60:41:b1:79", "Cams", -88), WifiObs("e0:b2:60:41:b1:89", "Cams", -40)))
+        assertEquals(Level.OK, e.snapshot().camera.level)
+    }
+    @Test fun flaggedItemOffersItsMineKey() {
+        val e = engine()
+        e.onWifiScan(listOf(WifiObs("E0:B2:60:41:B1:79", "Cams", -88)))
+        assertEquals("wifi:e0:b2:60:41:b1", e.snapshot().camera.mineKey)
+    }
     @Test fun ordinaryNetworksAreOk() {
         val e = engine()
         e.onWifiScan(listOf(WifiObs("aa:bb:cc:00:00:03", "HomeWiFi", -50), WifiObs("aa:bb:cc:00:00:04", "Neighbor", -75)))

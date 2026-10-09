@@ -170,6 +170,10 @@ fun SettingsScreen() {
         if (Prefs.mySsids.isEmpty()) Text("none yet (start scanning while on your home Wi-Fi)", color = UiColors.dim, fontSize = 12.sp)
         Prefs.mySsids.forEach { s -> Row { Text(s, color = UiColors.text, fontSize = 13.sp, modifier = Modifier.weight(1f)); TextButton(onClick = { Prefs.forgetSsid(s) }) { Text("Forget") } } }
 
+        Text("My devices (not flagged)", color = UiColors.text, fontSize = 16.sp)
+        Text("Trackers and camera-like Wi-Fi sources you marked as yours or known. Remove one to start flagging it again.", color = UiColors.dim, fontSize = 12.sp)
+        if (Prefs.myDevices.isEmpty()) Text("none yet - tap \"This is mine\" on a flagged item on the Status tab", color = UiColors.dim, fontSize = 12.sp)
+        Prefs.myDevices.sorted().forEach { d -> Row { Text(d.removePrefix("ble:"), color = UiColors.text, fontSize = 13.sp, modifier = Modifier.weight(1f)); TextButton(onClick = { Prefs.unmarkMine(d); Monitor.refresh() }) { Text("Remove") } } }
         TextButton(onClick = { ctx.startActivity(Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS)) }) { Text("Battery settings (allow unrestricted background use)") }
         Text("N0RMA v0.2 - detect-only. Nothing leaves this phone except the optional address lookup above.", color = UiColors.faint, fontSize = 11.sp)
     }

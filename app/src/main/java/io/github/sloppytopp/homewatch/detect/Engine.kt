@@ -2,7 +2,8 @@ package io.github.sloppytopp.homewatch.detect
 
 enum class Level { OFF, OK, WATCH, ALERT }
 
-data class DomainState(val level: Level, val message: String)
+/** [mineKey] is what "This is mine" would save for the thing named in [message] (a Bluetooth address, or "wifi:" + the first five octets of a camera-like network). */
+data class DomainState(val level: Level, val message: String, val mineKey: String? = null)
 data class TrackerRow(val addr: String, val label: String, val rssi: Int, val seenS: Long, val agoS: Long, val mine: Boolean = false)
 data class DroneRow(val addr: String, val info: RemoteIdInfo, val rssi: Int, val agoS: Long, val via: String)
 data class EventRow(val ts: Long, val domain: String, val level: Level, val msg: String)
@@ -237,7 +238,7 @@ class Engine(
             val h = following.first()
             val msg = "${h.label} has FOLLOWED you: heard ${h.key} at ${h.visits.size} different places over ${h.spanMs / 60_000} min"
             emit("tracker", Level.ALERT, "follow:${h.key}", msg, 1_800_000, now)
-            DomainState(Level.ALERT, msg)
+            DomainState(Level.ALERT, msg, h.key)
         } else if (trackers.isNotEmpty()) {
             val (addr, s) = trackers.entries.maxByOrNull { it.value.rssi }!!
             val dur = (s.last - s.first) / 1000
@@ -245,7 +246,7 @@ class Engine(
             val msg = "${s.label} nearby: $addr rssi=${s.rssi} dBm, seen ${dur}s"
             val lvl = if (close) Level.ALERT else Level.WATCH
             emit("tracker", lvl, "tracker:$addr", msg, 900_000, now)
-            DomainState(lvl, msg)
+            DomainState(lvl, msg, addr)
         } else DomainState(Level.OK, "No unknown trackers in range ($adsSeen Bluetooth ads heard, $ambient normal Apple devices ignored" +
             (if (mineCount > 0) ", $mineCount of your own trackers" else "") + ")")
         if (trackerState.level == Level.ALERT && lastTrackerLevel != Level.ALERT) alert("tracker", if (following.isNotEmpty()) "A tracker has followed you across several places." else "A tracker has stayed close to you.")
@@ -255,14 +256,17 @@ class Engine(
         val cameraState = when {
             !wifiEnabled -> DomainState(Level.OFF, wifiNote ?: "Wi-Fi scanning is off")
             !wifiFresh -> DomainState(Level.OFF, wifiNote ?: "Waiting for the first Wi-Fi scan...")
+            wifiCams.none { !isMine(camKey(it.row.bssid)) } && wifiCams.isNotEmpty() ->
+                DomainState(Level.OK, "No camera-like Wi-Fi sources besides ${wifiCams.map { camKey(it.row.bssid) }.distinct().size} you marked as yours")
             wifiCams.isNotEmpty() -> {
-                val h = wifiCams.maxByOrNull { it.row.level }!!
+                val h = wifiCams.filter { !isMine(camKey(it.row.bssid)) }.maxByOrNull { it.row.level }!!
                 val near = h.row.level > -60
                 val lvl = if (near) Level.ALERT else Level.WATCH
                 val msg = "Camera-like Wi-Fi source '${h.row.ssid}' ${h.row.bssid}${if (h.row.vendor.isNotEmpty()) " (${h.row.vendor})" else ""} " +
                     "${h.row.level} dBm${if (near) " - VERY CLOSE" else ""}"
-                emit("camera", lvl, "cam:${h.row.bssid}", msg, 1_800_000, now)
-                DomainState(lvl, msg)
+                // One radio often broadcasts several virtual networks (…:79, …:89): log them as one source, and repeat a quiet WATCH only every 6 h
+                emit("camera", lvl, camKey(h.row.bssid), msg, if (near) 1_800_000 else 6 * 3_600_000L, now)
+                DomainState(lvl, msg, camKey(h.row.bssid))
             }
             else -> DomainState(Level.OK, "No camera-like Wi-Fi sources (${wifiRows.size} networks in range)")
         }
@@ -287,6 +291,9 @@ class Engine(
                 .map { (a, x) -> InspectRow(a, x.name, x.rssi, x.company, (now - x.last) / 1000) }.sortedByDescending { it.rssi },
         )
     }
+
+    /** Virtual networks from one radio share their first five octets: treat them as one source. */
+    private fun camKey(bssid: String) = "wifi:" + bssid.lowercase().split(":").take(5).joinToString(":")
 
     private fun alert(domain: String, text: String) { if (!demoMode) onAlert(domain, text) }
 
