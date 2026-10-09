@@ -20,6 +20,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
@@ -40,7 +41,9 @@ import io.github.sloppytopp.homewatch.detect.Geo
 import io.github.sloppytopp.homewatch.detect.Survey
 import io.github.sloppytopp.homewatch.detect.SurveyPoint
 import io.github.sloppytopp.homewatch.scan.Monitor
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.withContext
 
 private fun write(ctx: Context, uri: Uri, text: String): Boolean =
     try { ctx.contentResolver.openOutputStream(uri)?.use { it.write(text.toByteArray()) } != null } catch (e: Exception) { false }
@@ -57,10 +60,15 @@ fun SurveyCard() {
     var clearAsk by remember { mutableStateOf(false) }
 
     LaunchedEffect(Monitor.surveying) { while (Monitor.surveying) { delay(4000); v++ } }
-    val points = remember(v, Monitor.surveyCount) { Store.survey() }
-    val allEst = remember(points) { Survey.estimate(points) }
-    val clustered = remember(allEst) { Survey.clustered(allEst) }
-    val est = if (clustered) emptyList() else allEst
+    // DB read + estimate are heavy on a long walk: keep them off the UI thread (they caused "app isn't responding").
+    val loaded by produceState<Triple<List<SurveyPoint>, List<Estimate>, Boolean>?>(null, v, Monitor.surveyCount) {
+        value = withContext(Dispatchers.Default) {
+            val pts = Store.survey(); val e = Survey.estimate(pts); Triple(pts, e, Survey.clustered(e))
+        }
+    }
+    val points = loaded?.first ?: emptyList()
+    val clustered = loaded?.third ?: false
+    val est = if (clustered) emptyList() else loaded?.second ?: emptyList()
 
     val kmlOut = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/vnd.google-earth.kml+xml")) { uri ->
         msg = if (uri != null && pending != null) (if (write(ctx, uri, pending!!)) "Saved. Open the file in Google Earth (or any KML viewer)." else "Couldn't save the file.") else null
@@ -146,8 +154,10 @@ private fun SurveyMap(points: List<SurveyPoint>, est: List<Estimate>) {
     val tm = rememberTextMeasurer()
     val label = TextStyle(color = UiColors.dim, fontSize = 10.sp)
     val home = Prefs.home
-    val lats = points.map { it.lat } + est.map { it.lat } + listOfNotNull(home?.lat)
-    val lons = points.map { it.lon } + est.map { it.lon } + listOfNotNull(home?.lon)
+    // Thin the trail to at most ~400 vertices (points arrive ordered by ts from the DB); never sort or map thousands of rows per frame.
+    val trail = remember(points) { val step = maxOf(1, points.size / 400); points.filterIndexed { i, _ -> i % step == 0 } }
+    val lats = trail.map { it.lat } + est.map { it.lat } + listOfNotNull(home?.lat)
+    val lons = trail.map { it.lon } + est.map { it.lon } + listOfNotNull(home?.lon)
     val la0 = lats.average(); val lo0 = lons.average()
     fun off(la: Double, lo: Double) = Geo.offsetM(la, lo, la0, lo0)
     val all = lats.indices.map { off(lats[it], lons[it]) }
@@ -157,7 +167,7 @@ private fun SurveyMap(points: List<SurveyPoint>, est: List<Estimate>) {
         fun pos(la: Double, lo: Double): Offset { val (e, n) = off(la, lo); return Offset(c.x + e.toFloat() * sc, c.y - n.toFloat() * sc) }
         drawRect(UiColors.ring, topLeft = Offset(1f, 1f), size = size.copy(width = size.width - 2, height = size.height - 2), style = Stroke(1.dp.toPx()))
         val path = Path()
-        points.sortedBy { it.ts }.map { pos(it.lat, it.lon) }.distinct().forEachIndexed { i, o -> if (i == 0) path.moveTo(o.x, o.y) else path.lineTo(o.x, o.y) }
+        trail.map { pos(it.lat, it.lon) }.distinct().forEachIndexed { i, o -> if (i == 0) path.moveTo(o.x, o.y) else path.lineTo(o.x, o.y) }
         drawPath(path, UiColors.good, style = Stroke(2.dp.toPx()))
         home?.let { h -> val o = pos(h.lat, h.lon); drawRect(androidx.compose.ui.graphics.Color(0xFF58708A), Offset(o.x - 5.dp.toPx(), o.y - 5.dp.toPx()), androidx.compose.ui.geometry.Size(10.dp.toPx(), 10.dp.toPx())); drawText(tm, "HOME", Offset(o.x + 8.dp.toPx(), o.y - 5.dp.toPx()), label) }
         est.take(12).forEach { e ->
