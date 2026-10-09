@@ -538,3 +538,34 @@ class LensSpotterTest {
         assertEquals(1, LensSpotter.find(a, w, h, stride).spots.size)
     }
 }
+
+
+class TscmReportTest {
+    private val tz = java.util.TimeZone.getTimeZone("UTC")
+    private val rooms = listOf(TscmRoom("Bedroom", 1_700_000_000_000L, 42, setOf("ceil", "outlets")), TscmRoom("Garage", null, null, emptySet()))
+    private fun report(events: List<EventRow> = emptyList()) =
+        Evidence.build(1_700_000_100_000L, events, emptyList(), emptyList(), tz, Tscm.TITLE, Tscm.sections(rooms, events, emptyList(), 2, tz))
+
+    @Test fun listsWhatWasAndWasNotDone() {
+        val r = report()
+        assertTrue(r, r.contains("Bedroom: swept 2023-11-14")); assertTrue(r, r.contains("Garage: NOT SWEPT"))
+        assertTrue(r, r.contains("Bedroom: 2 of ")); assertEquals(1, Regex("NOT CHECKED: Ceiling").findAll(r).count());   // only Garage (Bedroom ticked it)
+         assertTrue(r, r.contains("NOT CHECKED: Mirrors"))
+        assertTrue(r, r.contains("METHODS NOT PERFORMED")); assertTrue(r, r.contains("Non-linear junction"))
+    }
+    @Test fun neverSaysClear() {
+        val r = report()
+        assertTrue(r.contains("does NOT show the area is free")); assertFalse(r.lowercase().contains("all clear")); assertFalse(r.contains("area is clear"))
+    }
+    @Test fun flaggedFindingsAreCountedByArea() {
+        val r = report(listOf(EventRow(1_700_000_000_000L, "camera", Level.WATCH, "Camera-like source")))
+        assertTrue(r.contains("1 camera")); assertTrue(r.contains("not proof of surveillance"))
+    }
+    @Test fun hashChainVerifiesAndCatchesEditsToTheScope() {
+        val r = report()
+        assertTrue(Evidence.verify(r))
+        assertFalse(Evidence.verify(r.replace("Garage: NOT SWEPT", "Garage: swept 2023-11-14 22:13 UTC, 40 signals heard")))
+    }
+    @Test fun plainEvidenceReportStillVerifies() =
+        assertTrue(Evidence.verify(Evidence.build(1_700_000_100_000L, emptyList(), emptyList(), emptyList(), tz)))
+}

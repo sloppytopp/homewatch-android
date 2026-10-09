@@ -21,6 +21,8 @@ import io.github.sloppytopp.homewatch.data.Store
 import io.github.sloppytopp.homewatch.detect.Evidence
 import io.github.sloppytopp.homewatch.detect.Follow
 import io.github.sloppytopp.homewatch.detect.Report
+import io.github.sloppytopp.homewatch.detect.Tscm
+import io.github.sloppytopp.homewatch.detect.TscmRoom
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -58,6 +60,24 @@ fun HistoryScreen() {
             }, modifier = Modifier.fillMaxWidth(),
             colors = ButtonDefaults.buttonColors(containerColor = UiColors.buttonBg, contentColor = UiColors.buttonFg),
         ) { Text("Export evidence report") }
+
+        Text("Sweep report (TSCM-style)", color = UiColors.text, fontSize = 16.sp)
+        Text("A fuller report: which rooms you swept and inspected, what was NOT checked, and what was flagged. It never says a place is \"clear\". Same tamper-evident hash chain; you choose where to send it.", color = UiColors.dim, fontSize = 12.sp)
+        Button(
+            onClick = {
+                val scans = Store.latestScans()
+                val rooms = io.github.sloppytopp.homewatch.data.Prefs.rooms.map { r ->
+                    TscmRoom(r, scans[r]?.ts, scans[r]?.items?.size, io.github.sloppytopp.homewatch.data.Prefs.inspected[r] ?: emptySet())
+                }
+                val ev = Store.events(now - 30 * 86_400_000L, 1500); val fo = Follow.analyze(Store.trail())
+                val rpt = Evidence.build(System.currentTimeMillis(), ev, fo, Store.trail(), title = Tscm.TITLE,
+                    extra = Tscm.sections(rooms, ev, fo, io.github.sloppytopp.homewatch.data.Prefs.myDevices.size))
+                ctx.startActivity(android.content.Intent.createChooser(
+                    android.content.Intent(android.content.Intent.ACTION_SEND).setType("text/plain")
+                        .putExtra(android.content.Intent.EXTRA_SUBJECT, "N0RMA sweep report").putExtra(android.content.Intent.EXTRA_TEXT, rpt), "Share report"))
+            }, modifier = Modifier.fillMaxWidth(),
+            colors = ButtonDefaults.buttonColors(containerColor = UiColors.buttonBg, contentColor = UiColors.buttonFg),
+        ) { Text("Export sweep report") }
 
         StalkerCard()
         DigitalSafetyCard()

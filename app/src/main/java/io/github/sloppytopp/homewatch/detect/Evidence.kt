@@ -20,10 +20,11 @@ object Evidence {
     private fun fmt(ts: Long, tz: TimeZone): String =
         SimpleDateFormat("yyyy-MM-dd HH:mm:ss z", Locale.US).apply { timeZone = tz }.format(Date(ts))
 
-    fun build(nowMs: Long, events: List<EventRow>, follow: List<FollowHit>, sights: List<Sight>, tz: TimeZone = TimeZone.getDefault()): String {
+    fun build(nowMs: Long, events: List<EventRow>, follow: List<FollowHit>, sights: List<Sight>, tz: TimeZone = TimeZone.getDefault(),
+              title: String = "N0RMA EVIDENCE REPORT", extra: String = ""): String {
         val flagged = events.filter { it.level == Level.WATCH || it.level == Level.ALERT }.sortedBy { it.ts }
         val out = StringBuilder()
-        out.appendLine("N0RMA EVIDENCE REPORT")
+        out.appendLine(title)
         out.appendLine("Generated: ${fmt(nowMs, tz)}")
         out.appendLine()
         out.appendLine("SUMMARY (plain language)")
@@ -35,6 +36,7 @@ object Evidence {
         }
         out.appendLine("- Limits: this is signal evidence, not proof of who placed a device. Places are rough Wi-Fi \"fingerprints\" (no GPS). Cellular/GPS trackers cannot be heard by a phone. Remote ID drone broadcasts can be faked.")
         out.appendLine()
+        if (extra.isNotEmpty()) { out.append(extra); if (!extra.endsWith("\n\n")) out.appendLine() }   // covered by the hash chain like everything above the event log
         if (follow.isNotEmpty()) {
             out.appendLine("TRACKER TRAIL (which \"place\" each sighting was at; place numbers are in order first visited)")
             follow.forEach { h ->
