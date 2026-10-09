@@ -1,5 +1,7 @@
 # N0RMA for Android
 
+[![CI](https://github.com/sloppytopp/n0rma-android/actions/workflows/ci.yml/badge.svg)](https://github.com/sloppytopp/n0rma-android/actions/workflows/ci.yml)
+
 **Check whether anything nearby is tracking or watching you - using only your phone's own radios. Nothing leaves your phone.**
 
 Detect-only. No account, no cloud, no ads, no analytics, and no internet permission at all.
@@ -81,7 +83,7 @@ No internet permission. See [PRIVACY.md](PRIVACY.md).
 This is a beta tested on one phone so far. Test reports (hits, misses and false alarms) are the most valuable contribution: [docs/TESTING.md](docs/TESTING.md).
 
 ## Build
-JDK 17 + Android SDK 35: `./gradlew assembleDebug testDebugUnitTest` (49 JUnit tests over the radio parsing and detection logic), then `adb install -r app/build/outputs/apk/debug/app-debug.apk`.
+JDK 17 + Android SDK 35: `./gradlew assembleDebug testDebugUnitTest` (JUnit tests over the radio parsing and detection logic; CI runs them on every push), then `adb install -r app/build/outputs/apk/debug/app-debug.apk`.
 Release builds read signing details from an untracked `keystore.properties`; without it the release APK is unsigned (which is what F-Droid needs).
 
 ## Related
