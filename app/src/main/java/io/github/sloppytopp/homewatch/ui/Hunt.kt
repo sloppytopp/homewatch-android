@@ -203,3 +203,20 @@ private fun WifiHunt(onClose: () -> Unit) {
         confirmButton = { TextButton(onClick = onClose) { Text("Done") } },
     )
 }
+
+
+/** Live signal strength over the last readings, with a dashed line at the best so far. Taller = stronger. */
+@Composable
+internal fun RssiGraph(values: List<Int>, best: Int?) {
+    Canvas(Modifier.fillMaxWidth().aspectRatio(3.2f)) {
+        val lo = -100f; val hi = -30f
+        fun y(v: Int) = size.height - ((v.coerceIn(-100, -30) - lo) / (hi - lo)) * size.height
+        drawRect(UiColors.ring, style = Stroke(1.dp.toPx()))
+        best?.let { b -> drawLine(UiColors.watch, Offset(0f, y(b)), Offset(size.width, y(b)), 1.dp.toPx(), pathEffect = androidx.compose.ui.graphics.PathEffect.dashPathEffect(floatArrayOf(10f, 8f))) }
+        val step = size.width / (values.size - 1).coerceAtLeast(1)
+        val path = Path()
+        values.forEachIndexed { i, v -> if (i == 0) path.moveTo(0f, y(v)) else path.lineTo(i * step, y(v)) }
+        drawPath(path, UiColors.good, style = Stroke(2.dp.toPx()))
+        values.lastOrNull()?.let { drawCircle(UiColors.alert, 4.dp.toPx(), Offset((values.size - 1) * step, y(it))) }
+    }
+}

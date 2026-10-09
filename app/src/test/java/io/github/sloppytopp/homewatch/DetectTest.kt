@@ -440,3 +440,19 @@ class SurveyGateTest {
         assertTrue(g.keep(p(0, "a"))); assertTrue(g.keep(p(1_000, "b"))); assertFalse(g.keep(p(2_000, "a")))
     }
 }
+
+
+class FindAidTest {
+    @Test fun fasterWhenCloser() {
+        val far = FindAid.pulseGapMs(-85)!!; val near = FindAid.pulseGapMs(-55)!!; val here = FindAid.pulseGapMs(-40)!!
+        assertTrue(far > near && near > here); assertTrue(here in 100..200)
+    }
+    @Test fun tooFaintIsSilent() = assertNull(FindAid.pulseGapMs(-97))
+    @Test fun bestKeepsTheMax() {
+        assertEquals(-60, FindAid.best(listOf(-80, -60, -75), null)); assertEquals(-50, FindAid.best(listOf(-70), -50))
+    }
+    @Test fun wordsVersusBest() {
+        assertEquals("This is the strongest so far", FindAid.versusBest(-50, -50))
+        assertEquals("12 dB weaker than your best spot", FindAid.versusBest(-62, -50))
+    }
+}

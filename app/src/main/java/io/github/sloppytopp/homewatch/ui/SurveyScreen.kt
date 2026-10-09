@@ -58,6 +58,7 @@ fun SurveyCard() {
     var msg by remember { mutableStateOf<String?>(null) }
     var wigleWarn by remember { mutableStateOf(false) }
     var clearAsk by remember { mutableStateOf(false) }
+    var finding by remember { mutableStateOf<Pair<String, String>?>(null) }
 
     LaunchedEffect(Monitor.surveying) { while (Monitor.surveying) { delay(4000); v++ } }
     // DB read + estimate are heavy on a long walk: keep them off the UI thread (they caused "app isn't responding").
@@ -103,9 +104,12 @@ fun SurveyCard() {
             est.take(10).forEach { e ->
                 val where = if (home != null) "${Math.round(Geo.distanceM(e.lat, e.lon, home.lat, home.lon))} m ${Geo.compass(Geo.bearingDeg(e.lat, e.lon, home.lat, home.lon))} of home"
                 else "%.5f, %.5f".format(e.lat, e.lon)
+                androidx.compose.foundation.layout.Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
                 Text("${e.label.ifEmpty { e.key }} - $where (+/- ${Math.round(e.radiusM)} m, strongest ${e.bestRssi} dBm, ${e.samples} samples)" +
                     (if (e.klass == "camera" || e.klass == "drone") "  [${e.klass}-like]" else ""),
-                    color = if (e.klass == "camera" || e.klass == "drone") UiColors.alert else UiColors.text, fontSize = 12.sp)
+                    color = if (e.klass == "camera" || e.klass == "drone") UiColors.alert else UiColors.text, fontSize = 12.sp, modifier = Modifier.weight(1f))
+                TextButton(onClick = { finding = e.key.removePrefix("ble:") to e.label.ifEmpty { e.key } }) { Text("Find it") }
+                }
             }
 
             Text("Export", color = UiColors.text, fontSize = 14.sp)
@@ -125,6 +129,7 @@ fun SurveyCard() {
         Text("Survey points include your GPS trail, so they are sensitive. They are deleted after 30 days, and by \"Delete all history\".", color = UiColors.faint, fontSize = 11.sp)
     }
 
+    finding?.let { (addr, label) -> Finder(addr, label) { finding = null } }
     if (wigleWarn) AlertDialog(
         containerColor = UiColors.dialogBg, titleContentColor = UiColors.text, textContentColor = UiColors.text,
         onDismissRequest = { wigleWarn = false }, title = { Text("About WiGLE files") },

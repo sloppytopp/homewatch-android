@@ -15,6 +15,7 @@ import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.drawscope.Stroke
 import io.github.sloppytopp.homewatch.detect.DirectionFinder
+import io.github.sloppytopp.homewatch.detect.FindAid
 import io.github.sloppytopp.homewatch.detect.Geo
 import io.github.sloppytopp.homewatch.detect.Trend
 import kotlin.math.cos
@@ -152,6 +153,9 @@ internal fun Finder(addr: String, label: String, onClose: () -> Unit) {
     val heading by compass.heading
     val hasCompass = compass.available
     val history = remember { androidx.compose.runtime.mutableStateListOf<Int>() }
+    val graph = remember { androidx.compose.runtime.mutableStateListOf<Int>() }   // longer memory for the live graph
+    var best by remember { mutableStateOf<Int?>(null) }
+    var buzz by remember { mutableStateOf(false) }
     var sweeping by remember { mutableStateOf(false) }
     var sweepAt by remember { mutableLongStateOf(0L) }
     val finder = remember { DirectionFinder() }
@@ -186,6 +190,8 @@ internal fun Finder(addr: String, label: String, onClose: () -> Unit) {
             val (r, age) = rssiNow()
             if (r != null && age != null && age <= (if (isWifi) 40 else 1)) {
                 history.add(r); if (history.size > 12) history.removeAt(0)
+                graph.add(r); if (graph.size > 60) graph.removeAt(0)
+                best = FindAid.best(listOf(r), best)
                 if (sweeping) finder.add(heading.toDouble(), r)
             }
             if (sweeping && System.currentTimeMillis() - sweepAt > 40_000) { sweeping = false; answer = finder.result(); answered = true }
@@ -195,6 +201,18 @@ internal fun Finder(addr: String, label: String, onClose: () -> Unit) {
 
     val (rssi, age) = rssiNow()
     val trend = Trend.of(history.toList())
+
+    // vibrate faster as it gets closer, so you can keep your eyes up while walking
+    LaunchedEffect(buzz) {
+        if (!buzz) return@LaunchedEffect
+        val vib = ctx.getSystemService(android.content.Context.VIBRATOR_SERVICE) as? android.os.Vibrator
+        while (true) {
+            val r = history.lastOrNull()
+            val gap = r?.let { FindAid.pulseGapMs(it) }
+            if (gap != null) vib?.vibrate(android.os.VibrationEffect.createOneShot(40, android.os.VibrationEffect.DEFAULT_AMPLITUDE))
+            delay(gap ?: 500L)
+        }
+    }
     AlertDialog(
         containerColor = UiColors.dialogBg, titleContentColor = UiColors.text, textContentColor = UiColors.text,
         onDismissRequest = onClose,
@@ -202,6 +220,11 @@ internal fun Finder(addr: String, label: String, onClose: () -> Unit) {
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.verticalScroll(rememberScrollState())) {
                 Text(addr, fontSize = 12.sp)
+                if (graph.size >= 2) {
+                    RssiGraph(graph.toList(), best)
+                    best?.let { b -> rssi?.let { Text("Best so far: $b dBm. " + FindAid.versusBest(it, b), fontSize = 12.sp) } }
+                }
+                TextButton(onClick = { buzz = !buzz }) { Text(if (buzz) "Vibration guide ON - tap to turn off" else "Vibrate faster as I get closer") }
                 if (rssi == null) Text("Not heard right now. Wait a few seconds, or move closer.")
                 else {
                     Meter(((rssi + 100) / 60f), "$rssi dBm - " + when { rssi >= -50 -> "very hot: it's right here"; rssi >= -62 -> "hot"; rssi >= -75 -> "warm"; else -> "cold" } +
