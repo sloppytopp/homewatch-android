@@ -76,6 +76,9 @@ fun RoomsScreen() {
             "Sweep each room once for a baseline, then again whenever you want to check: anything NEW in a room stands out. " +
             "With two or more rooms swept, it can also tell you which room a device is probably in - without GPS.", color = UiColors.dim, fontSize = 12.sp)
         if (!s.running) Text("Start scanning on the Status tab first.", color = UiColors.warn, fontSize = 13.sp)
+        var lens by remember { mutableStateOf(false) }
+        TextButton(onClick = { lens = true }) { Text("Open the lens finder (camera + torch)") }
+        if (lens) LensFinder { lens = false }
 
         val sw = sweeping
         if (sw != null) {

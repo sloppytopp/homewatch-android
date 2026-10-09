@@ -512,3 +512,29 @@ class InspectionTest {
         assertEquals(2, n); assertEquals(Inspection.itemsFor("Kitchen").size, t)
     }
 }
+
+
+class LensSpotterTest {
+    private val w = 160; private val h = 120
+    private fun img(bg: Int = 20, draw: (ByteArray) -> Unit): ByteArray = ByteArray(w * h) { bg.toByte() }.also(draw)
+    private fun dot(a: ByteArray, cx: Int, cy: Int, r: Int, v: Int = 255) {
+        for (y in cy - r..cy + r) for (x in cx - r..cx + r) a[y * w + x] = v.toByte()
+    }
+    @Test fun findsASmallBrightDotInTheDark() {
+        val r = LensSpotter.find(img { dot(it, 80, 60, 1) }, w, h, w)
+        assertEquals(1, r.spots.size)
+        assertEquals(0.5f, r.spots[0].x, 0.03f); assertEquals(0.5f, r.spots[0].y, 0.03f)
+        assertFalse(r.tooBright)
+    }
+    @Test fun ignoresALargeBrightArea() = assertTrue(LensSpotter.find(img { dot(it, 80, 60, 20) }, w, h, w).spots.isEmpty())
+    @Test fun ignoresADotInABrightSurround() = assertTrue(LensSpotter.find(img(bg = 200) { dot(it, 80, 60, 1) }, w, h, w).spots.isEmpty())
+    @Test fun ignoresAThinBrightStreak() = assertTrue(LensSpotter.find(img { for (x in 40..120) it[60 * w + x] = 255.toByte(); for (x in 40..120) it[61 * w + x] = 255.toByte() }, w, h, w).spots.isEmpty())
+    @Test fun findsTwoDots() = assertEquals(2, LensSpotter.find(img { dot(it, 30, 30, 1); dot(it, 120, 90, 1) }, w, h, w).spots.size)
+    @Test fun flatDarkImageHasNone() = assertTrue(LensSpotter.find(img { }, w, h, w).spots.isEmpty())
+    @Test fun brightRoomIsFlagged() = assertTrue(LensSpotter.find(img(bg = 150) { }, w, h, w).tooBright)
+    @Test fun respectsRowStride() {
+        val stride = 192; val a = ByteArray(stride * h) { 20 }
+        for (y in 59..61) for (x in 79..81) a[y * stride + x] = 255.toByte()
+        assertEquals(1, LensSpotter.find(a, w, h, stride).spots.size)
+    }
+}
