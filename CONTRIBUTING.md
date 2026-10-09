@@ -7,3 +7,6 @@ Welcome! Ground rules that keep the project trustworthy:
 5. **Tests.** Radio parsing and detection logic live in pure Kotlin under `detect/` with JUnit tests - add a test with every fix (`./gradlew testDebugUnitTest`).
 
 Build: JDK 17 + Android SDK 35, `./gradlew assembleDebug`. Please don't commit screenshots, logs or exports that contain real network names, MAC addresses or locations.
+
+## Testing and test reports
+The most useful contribution is a test report: see [docs/TESTING.md](docs/TESTING.md) for the protocol (own devices, a room you control, everyone consenting). Misses and false alarms are the most valuable results.

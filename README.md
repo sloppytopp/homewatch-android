@@ -77,6 +77,9 @@ If the fingerprint is different, it is not an official build - don't install it.
 
 No internet permission. See [PRIVACY.md](PRIVACY.md).
 
+## Help test it
+This is a beta tested on one phone so far. Test reports (hits, misses and false alarms) are the most valuable contribution: [docs/TESTING.md](docs/TESTING.md).
+
 ## Build
 JDK 17 + Android SDK 35: `./gradlew assembleDebug testDebugUnitTest` (49 JUnit tests over the radio parsing and detection logic), then `adb install -r app/build/outputs/apk/debug/app-debug.apk`.
 Release builds read signing details from an untracked `keystore.properties`; without it the release APK is unsigned (which is what F-Droid needs).
