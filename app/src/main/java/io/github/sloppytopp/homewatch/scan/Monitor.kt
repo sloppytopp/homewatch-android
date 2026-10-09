@@ -11,7 +11,8 @@ import io.github.sloppytopp.homewatch.detect.Snapshot
 object Monitor {
     var onAlert: (String, String) -> Unit = { _, _ -> }
     val engine = Engine(onAlert = { d, t -> onAlert(d, t) }, eventSink = { runCatching { Store.addEvent(it) } }, trailSink = { runCatching { Store.addSight(it) } }, netSink = { runCatching { Store.addKnownNets(it) } },
-        isMine = { runCatching { io.github.sloppytopp.homewatch.data.Prefs.isMine(it) }.getOrDefault(false) })
+        isMine = { runCatching { io.github.sloppytopp.homewatch.data.Prefs.isMine(it) }.getOrDefault(false) },
+        locProvider = { lastLoc?.let { it.latitude to it.longitude } })
     var snapshot by mutableStateOf(Snapshot())
         private set
 

@@ -47,7 +47,19 @@ class Engine(
     private val isMine: (String) -> Boolean = { false },
     private val trailSink: (Sight) -> Unit = {},
     private val netSink: (List<String>) -> Unit = {},
+    private val locProvider: () -> Pair<Double, Double>? = { null },
 ) {
+    /** The phone's own GPS fixes (only available while the phone has a fix, e.g. during a survey walk). Used to veto "followed you" when the phone barely moved. */
+    private val phonePath = ArrayList<Triple<Long, Double, Double>>()
+    private var lastPathAt = 0L
+
+    /** Farthest the phone got from itself between [from] and [to], or null when there are too few GPS fixes to say. */
+    internal fun movedM(from: Long, to: Long): Double? {
+        val pts = phonePath.filter { it.first in from..to }
+        if (pts.size < 2) return null
+        return pts.maxOf { a -> pts.maxOf { b -> Geo.distanceM(a.second, a.third, b.second, b.third) } }
+    }
+
     private class Sighting(val kind: Kind, val label: String, val first: Long) {
         var last = first
         var n = 0
@@ -201,8 +213,14 @@ class Engine(
                 while (trail.size > MAX_TRAIL) trail.removeAt(0)
             }
         }
+        if (!demoMode && now - lastPathAt >= TRAIL_EVERY_MS) locProvider()?.let { (la, lo) ->
+            lastPathAt = now; phonePath += Triple(now, la, lo); while (phonePath.size > 2000) phonePath.removeAt(0)
+        }
         if (now - followAt >= 30_000L) { followAt = now; followHits = Follow.analyze(trail) }
-        val following = followHits.filter { h -> trackers.containsKey(h.key) }
+        // A tracker that sat still while the phone's Wi-Fi view shifted is not following: if GPS shows the phone barely moved, veto it
+        val following = followHits.filter { h ->
+            trackers.containsKey(h.key) && (movedM(h.visits.minOf { it.first }, h.visits.maxOf { it.last })?.let { it >= MIN_MOVE_M } ?: true)
+        }
 
         // ---- drone: Remote ID is unauthenticated, so word it as a claim
         var droneState = DomainState(Level.OK, "No Remote ID drone heard (Bluetooth${if (wifiEnabled) " + Wi-Fi" else ""})")
@@ -256,17 +274,17 @@ class Engine(
         val cameraState = when {
             !wifiEnabled -> DomainState(Level.OFF, wifiNote ?: "Wi-Fi scanning is off")
             !wifiFresh -> DomainState(Level.OFF, wifiNote ?: "Waiting for the first Wi-Fi scan...")
-            wifiCams.none { !isMine(camKey(it.row.bssid)) } && wifiCams.isNotEmpty() ->
-                DomainState(Level.OK, "No camera-like Wi-Fi sources besides ${wifiCams.map { camKey(it.row.bssid) }.distinct().size} you marked as yours")
+            wifiCams.none { !isMine(camKey(it.row.bssid, it.row.ssid)) } && wifiCams.isNotEmpty() ->
+                DomainState(Level.OK, "No camera-like Wi-Fi sources besides ${wifiCams.map { camKey(it.row.bssid, it.row.ssid) }.distinct().size} you marked as yours")
             wifiCams.isNotEmpty() -> {
-                val h = wifiCams.filter { !isMine(camKey(it.row.bssid)) }.maxByOrNull { it.row.level }!!
+                val h = wifiCams.filter { !isMine(camKey(it.row.bssid, it.row.ssid)) }.maxByOrNull { it.row.level }!!
                 val near = h.row.level > -60
                 val lvl = if (near) Level.ALERT else Level.WATCH
                 val msg = "Camera-like Wi-Fi source '${h.row.ssid}' ${h.row.bssid}${if (h.row.vendor.isNotEmpty()) " (${h.row.vendor})" else ""} " +
                     "${h.row.level} dBm${if (near) " - VERY CLOSE" else ""}"
                 // One radio often broadcasts several virtual networks (…:79, …:89): log them as one source, and repeat a quiet WATCH only every 6 h
-                emit("camera", lvl, camKey(h.row.bssid), msg, if (near) 1_800_000 else 6 * 3_600_000L, now)
-                DomainState(lvl, msg, camKey(h.row.bssid))
+                emit("camera", lvl, camKey(h.row.bssid, h.row.ssid), msg, if (near) 1_800_000 else 6 * 3_600_000L, now)
+                DomainState(lvl, msg, camKey(h.row.bssid, h.row.ssid))
             }
             else -> DomainState(Level.OK, "No camera-like Wi-Fi sources (${wifiRows.size} networks in range)")
         }
@@ -293,7 +311,7 @@ class Engine(
     }
 
     /** Virtual networks from one radio share their first five octets: treat them as one source. */
-    private fun camKey(bssid: String) = "wifi:" + bssid.lowercase().split(":").take(5).joinToString(":")
+    private fun camKey(bssid: String, ssid: String) = "wifi:" + bssid.lowercase().split(":").take(5).joinToString(":") + "|" + ssid
 
     private fun alert(domain: String, text: String) { if (!demoMode) onAlert(domain, text) }
 
@@ -317,6 +335,7 @@ class Engine(
         const val MAX_KNOWN_NETS = 5000
         const val TRAIL_EVERY_MS = 60_000L
         const val MAX_TRAIL = 6000
+        const val MIN_MOVE_M = 150.0        // "followed you" needs the phone to have travelled at least this far, when GPS can tell
         val COMPANIES = mapOf(
             0x004C to "Apple", 0x0075 to "Samsung", 0x0006 to "Microsoft", 0x00E0 to "Google", 0x0087 to "Garmin",
             0x0171 to "Amazon", 0x02E5 to "Espressif (IoT)", 0x0059 to "Nordic (IoT)", 0x0157 to "Huami/Amazfit",

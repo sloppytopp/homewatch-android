@@ -157,15 +157,20 @@ class WifiTest {
         assertEquals(1, e.snapshot().events.count { it.domain == "camera" })   // 4 h, two sister BSSIDs: still one entry
     }
     @Test fun markedCameraSourceIsNotFlagged() {
-        val mine = setOf("wifi:e0:b2:60:41:b1")
+        val mine = setOf("wifi:e0:b2:60:41:b1|Cams")
         val e = Engine({ t }, { _, _ -> }, isMine = { it in mine }).also { it.running = true; it.wifiEnabled = true }
         e.onWifiScan(listOf(WifiObs("e0:b2:60:41:b1:79", "Cams", -88), WifiObs("e0:b2:60:41:b1:89", "Cams", -40)))
         assertEquals(Level.OK, e.snapshot().camera.level)
     }
+    @Test fun markedSourceDoesNotSilenceADifferentlyNamedNetwork() {
+        val e = Engine({ t }, { _, _ -> }, isMine = { it == "wifi:e0:b2:60:41:b1|Cams" }).also { it.running = true; it.wifiEnabled = true }
+        e.onWifiScan(listOf(WifiObs("e0:b2:60:41:b1:99", "SpyCam_1", -40)))
+        assertEquals(Level.ALERT, e.snapshot().camera.level)
+    }
     @Test fun flaggedItemOffersItsMineKey() {
         val e = engine()
         e.onWifiScan(listOf(WifiObs("E0:B2:60:41:B1:79", "Cams", -88)))
-        assertEquals("wifi:e0:b2:60:41:b1", e.snapshot().camera.mineKey)
+        assertEquals("wifi:e0:b2:60:41:b1|Cams", e.snapshot().camera.mineKey)
     }
     @Test fun ordinaryNetworksAreOk() {
         val e = engine()
@@ -389,4 +394,25 @@ class DemoModeTest {
         e.snapshot()
         assertEquals(1, logged.size)                  // real sightings are logged again
     }
+}
+
+
+class FollowGpsTest {
+    private fun run(loc: (Int) -> Pair<Double, Double>?): String {
+        var t = 1_700_000_000_000L; var i = 0
+        val e = Engine({ t }, { _, _ -> }, locProvider = { loc(i) }).also { it.running = true; it.wifiEnabled = true }
+        val sep = Classification(Kind.TRACKER, "Apple Find My tracker SEPARATED from its owner")
+        var last = ""
+        repeat(60) {
+            i = it; t += 60_000
+            val g = it / 15   // the phone's Wi-Fi view changes every 15 min: four "places"
+            e.onWifiScan(listOf(WifiObs("aa:00:00:00:0$g:01", "n1", -50), WifiObs("aa:00:00:00:0$g:02", "n2", -55), WifiObs("aa:00:00:00:0$g:03", "n3", -60)))
+            e.onAdvertisement("T1", -55, sep)
+            last = e.snapshot().tracker.message
+        }
+        return last
+    }
+    @Test fun noGpsKeepsOldBehaviour() = assertTrue(run { null }.contains("FOLLOWED"))
+    @Test fun phoneStayedPutIsNotFollowing() = assertFalse(run { 33.5 to -85.3 }.contains("FOLLOWED"))
+    @Test fun phoneThatTravelledIsFollowing() = assertTrue(run { i -> 33.5 + i * 0.0003 to -85.3 }.contains("FOLLOWED"))
 }
