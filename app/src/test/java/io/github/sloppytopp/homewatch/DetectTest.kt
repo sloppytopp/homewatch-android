@@ -61,7 +61,12 @@ class ClassifierTest {
 
     @Test fun appleSeparatedIsTracker() = assertEquals(Kind.TRACKER, cls(mfr = mapOf(0x004C to byteArrayOf(0x12, 0x19, 0x10) + ByteArray(22))))
     @Test fun appleOwnerNearbyIsAmbient() = assertEquals(Kind.AMBIENT, cls(mfr = mapOf(0x004C to byteArrayOf(0x12, 0x02, 0x00, 0x02))))
-    @Test fun airPodsAreNothing() = assertEquals(Kind.NONE, cls(mfr = mapOf(0x004C to byteArrayOf(0x07, 0x19) + ByteArray(20))))
+    @Test fun airPodsAreOnlyAPopUpCandidate() {   // counted by the flood detector; one of them alone must never raise anything
+        assertEquals(Kind.SPAM, cls(mfr = mapOf(0x004C to byteArrayOf(0x07, 0x19) + ByteArray(20))))
+        val e = Engine({ 1_700_000_000_000L }, { _, _ -> }).also { it.running = true }
+        e.onAdvertisement("AA", -50, Classification(Kind.SPAM, "Apple pairing pop-up"))
+        assertEquals(Level.OK, e.snapshot().spam.level)
+    }
     @Test fun tile() = assertEquals(Kind.TRACKER, cls(uu = listOf(u("feed"))))
     @Test fun smartTag() = assertEquals(Kind.TRACKER, cls(sd = mapOf(u("fd5a") to byteArrayOf(1))))
     @Test fun chipolo() = assertEquals(Kind.TRACKER, cls(uu = listOf(u("fe33"))))
@@ -568,4 +573,66 @@ class TscmReportTest {
     }
     @Test fun plainEvidenceReportStillVerifies() =
         assertTrue(Evidence.verify(Evidence.build(1_700_000_100_000L, emptyList(), emptyList(), emptyList(), tz)))
+}
+
+
+class SpamDetectorTest {
+    private fun flood(d: SpamDetector, t0: Long, n: Int, ms: Long, family: String = "Apple pairing pop-up", rssi: Int = -55) =
+        repeat(n) { d.onAd("rand-${t0}-$it", family, rssi, t0 + it * ms) }
+
+    @Test fun manyDifferentAddressesIsAWatch() {
+        val d = SpamDetector(); flood(d, 1_000_000, 20, 500)
+        val s = d.evaluate(1_000_000 + 10_000)
+        assertEquals(Level.WATCH, s.level); assertEquals(20, s.distinct); assertTrue(s.message.contains("Apple pairing pop-up"))
+    }
+    @Test fun fewDevicesRepeatingTheSameAddressIsNot() {
+        val d = SpamDetector()
+        repeat(200) { d.onAd("AA:BB", "Apple pairing pop-up", -50, 1_000_000L + it * 100) }
+        repeat(5) { i -> repeat(40) { d.onAd("dev$i", "Apple pairing pop-up", -60, 1_000_000L + it * 100) } }
+        assertEquals(Level.OK, d.evaluate(1_000_000 + 15_000).level)
+    }
+    @Test fun aCrowdOfRepeatingDevicesIsNot() {   // 15 distinct addresses but each advertises many times: ratio too low
+        val d = SpamDetector()
+        repeat(15) { i -> repeat(10) { d.onAd("dev$i", "Google Fast Pair pop-up", -70, 1_000_000L + it * 1000 + i) } }
+        assertEquals(Level.OK, d.evaluate(1_000_000 + 12_000).level)
+    }
+    @Test fun sustainedLargeFloodBecomesAnAlert() {
+        val d = SpamDetector(); var last = Level.OK
+        for (sec in 0..90) { val now = 5_000_000L + sec * 1000; repeat(2) { d.onAd("r$sec-$it", "Windows Swift Pair pop-up", -48, now) }; last = d.evaluate(now).level }
+        assertEquals(Level.ALERT, last)
+    }
+    @Test fun briefBurstStaysAWatch() {
+        val d = SpamDetector(); flood(d, 2_000_000, 40, 200)
+        assertEquals(Level.WATCH, d.evaluate(2_000_000 + 9_000).level)   // 40 distinct but not sustained for 60 s
+    }
+    @Test fun floodEndsWhenTheAdsStop() {
+        val d = SpamDetector(); flood(d, 3_000_000, 20, 500)
+        assertEquals(Level.WATCH, d.evaluate(3_000_000 + 10_000).level)
+        assertEquals(Level.OK, d.evaluate(3_000_000 + 70_000).level)
+    }
+}
+
+class SpamClassifierTest {
+    @Test fun appleProximityAndNearbyActionAreSpamFamilies() {
+        assertEquals("Apple pairing pop-up", BleClassifier.spamFamily(mapOf(0x004C to byteArrayOf(0x07, 0x19)), emptyMap()))
+        assertEquals("Apple setup pop-up", BleClassifier.spamFamily(mapOf(0x004C to byteArrayOf(0x0F, 0x05)), emptyMap()))
+    }
+    @Test fun ordinaryAppleChatterIsNot() = assertNull(BleClassifier.spamFamily(mapOf(0x004C to byteArrayOf(0x10, 0x05)), emptyMap()))
+    @Test fun fastPairAndSwiftPair() {
+        assertEquals("Google Fast Pair pop-up", BleClassifier.spamFamily(emptyMap(), mapOf("0000fe2c-0000-1000-8000-00805f9b34fb" to byteArrayOf(1, 2, 3))))
+        assertEquals("Windows Swift Pair pop-up", BleClassifier.spamFamily(mapOf(0x0006 to byteArrayOf(0x03, 0x00, 0x80.toByte())), emptyMap()))
+        assertNull(BleClassifier.spamFamily(mapOf(0x0006 to byteArrayOf(0x01, 0x09)), emptyMap()))
+    }
+    @Test fun classifyReturnsSpamKindButTrackersWin() {
+        assertEquals(Kind.SPAM, BleClassifier.classify(mapOf(0x004C to byteArrayOf(0x07, 0x19)), emptyMap(), emptyList()).kind)
+        assertEquals(Kind.TRACKER, BleClassifier.classify(mapOf(0x004C to byteArrayOf(0x12, 0x19)), emptyMap(), emptyList()).kind)
+    }
+    @Test fun engineTurnsAFloodIntoAWatchTile() {
+        var t = 1_700_000_000_000L
+        val e = Engine({ t }, { _, _ -> }).also { it.running = true }
+        val c = Classification(Kind.SPAM, "Apple pairing pop-up")
+        repeat(25) { t += 400; e.onAdvertisement("r$it", -50, c) }
+        val s = e.snapshot()
+        assertEquals(Level.WATCH, s.spam.level); assertTrue(s.events.any { it.domain == "bluetooth" })
+    }
 }

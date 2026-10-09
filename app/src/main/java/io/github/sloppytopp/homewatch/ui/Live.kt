@@ -67,7 +67,7 @@ fun Heartbeat(running: Boolean) {
     Box(Modifier.size(10.dp).alpha(if (running) a else 1f).clip(CircleShape).background(if (running) UiColors.good else UiColors.neutral))
 }
 
-private fun worst(s: Snapshot): DLevel = listOf(s.drone.level, s.tracker.level, s.camera.level).maxByOrNull { it.ordinal } ?: DLevel.OFF
+private fun worst(s: Snapshot): DLevel = listOf(s.drone.level, s.tracker.level, s.camera.level, s.spam.level).maxByOrNull { it.ordinal } ?: DLevel.OFF
 
 /** One plain-language answer plus proof the app is working. */
 @Composable

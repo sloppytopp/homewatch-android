@@ -19,6 +19,7 @@ data class Snapshot(
     val drone: DomainState = DomainState(Level.OFF, "Not scanning"),
     val tracker: DomainState = DomainState(Level.OFF, "Not scanning"),
     val camera: DomainState = DomainState(Level.OFF, "Not scanning"),
+    val spam: DomainState = DomainState(Level.OFF, "Not scanning"),
     val rf: DomainState = DomainState(Level.OFF, "Needs optional RTL-SDR hardware"),
     val trackers: List<TrackerRow> = emptyList(),
     val drones: List<DroneRow> = emptyList(),
@@ -73,6 +74,8 @@ class Engine(
 
     private class WifiHit(val row: WifiRow, val info: RemoteIdInfo?, val why: String)
 
+    private val spam = SpamDetector()
+    private var lastSpamLevel = Level.OK
     private val sightings = HashMap<String, Sighting>()
     private val events = ArrayDeque<EventRow>()
     private val lastEmit = HashMap<String, Long>()
@@ -114,6 +117,7 @@ class Engine(
         when (c.kind) {
             Kind.NONE -> return
             Kind.AMBIENT -> { ambient++; return }
+            Kind.SPAM -> { if (!demoMode) spam.onAd(addr, c.label, rssi, clock()); return }
             else -> {}
         }
         val now = clock()
@@ -191,6 +195,7 @@ class Engine(
 
     @Synchronized
     fun reset() {
+        spam.clear(); lastSpamLevel = Level.OK
         sightings.clear(); events.clear(); lastEmit.clear(); adsSeen = 0; ambient = 0; inspect.clear()
         startedAt = clock()
         wifiAt = 0; wifiRows = emptyList(); wifiDrones = emptyList(); wifiCams = emptyList()
@@ -294,6 +299,13 @@ class Engine(
         if (cameraState.level == Level.ALERT && lastCameraLevel != Level.ALERT) alert("camera", "Something camera-like showed up very close on Wi-Fi.")
         lastCameraLevel = cameraState.level
 
+        // ---- Bluetooth pairing pop-up flood (Flipper Zero / phone-app spam)
+        val sp = spam.evaluate(now)
+        if (sp.level != Level.OK) emit("bluetooth", sp.level, "spam:${sp.family}", sp.message, 900_000, now)
+        if (sp.level == Level.ALERT && lastSpamLevel != Level.ALERT) alert("bluetooth", "A flood of fake Bluetooth pairing pop-ups is being broadcast nearby.")
+        lastSpamLevel = sp.level
+        val spamState = DomainState(sp.level, sp.message)
+
         if (demo != null && now < demoUntil) fixes += demo!!
         val off = Snapshot()
         return Snapshot(
@@ -301,6 +313,7 @@ class Engine(
             drone = if (running) droneState else off.drone,
             tracker = if (running) trackerState else off.tracker,
             camera = if (running) cameraState else off.camera,
+            spam = if (running) spamState else off.spam,
             trackers = allTrackers.map { (a, s) -> TrackerRow(a, s.label, s.rssi, (s.last - s.first) / 1000, (now - s.last) / 1000, isMine(a)) }
                 .sortedByDescending { it.rssi },
             drones = droneRows,

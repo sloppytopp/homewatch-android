@@ -262,6 +262,7 @@ private fun StatusScreen() {
     s.tracker.mineKey?.let { k -> if (flagged(s.tracker.level)) TextButton(onClick = { Prefs.markMine(k); Monitor.refresh() }) { Text("This is mine - stop flagging it") } }
     StatusTile("Unknown device?", lv(s.camera.level), s.camera.message, if (flagged(s.camera.level)) ({ Monitor.hunt = "camera" }) else null)
     s.camera.mineKey?.let { k -> if (flagged(s.camera.level)) TextButton(onClick = { Prefs.markMine(k); Monitor.refresh() }) { Text("This is mine / known - stop flagging it") } }
+    StatusTile("Bluetooth pop-up flood?", lv(s.spam.level), s.spam.message)
     StatusTile("Elevated RF / EMF? (RTL-SDR)", lv(s.rf.level), s.rf.message)
 
     if (s.running) {

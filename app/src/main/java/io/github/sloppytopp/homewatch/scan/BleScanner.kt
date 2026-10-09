@@ -29,6 +29,10 @@ class BleScanner(private val ctx: Context, private val inspect: Boolean = false)
         for (u in BleClassifier.TRACKER_UUIDS.keys) f += ScanFilter.Builder().setServiceUuid(uuid(u)).build()
         // Apple "Find My" (type 0x12): both separated and owner-nearby; the engine tells them apart.
         f += ScanFilter.Builder().setManufacturerData(0x004C, byteArrayOf(0x12), byteArrayOf(0xFF.toByte())).build()
+        // Pairing pop-up advertisements, for the pop-up flood detector: Apple Proximity Pairing (0x07) and Nearby Action (0x0F), Google Fast Pair, Windows Swift Pair
+        for (t in byteArrayOf(0x07, 0x0F)) f += ScanFilter.Builder().setManufacturerData(0x004C, byteArrayOf(t), byteArrayOf(0xFF.toByte())).build()
+        f += ScanFilter.Builder().setServiceData(uuid(BleClassifier.FAST_PAIR_UUID), ByteArray(0), ByteArray(0)).build()
+        f += ScanFilter.Builder().setManufacturerData(0x0006, byteArrayOf(0x03, 0x00), byteArrayOf(0xFF.toByte(), 0xFF.toByte())).build()
         return f
     }
 
