@@ -148,29 +148,29 @@ class WifiTest {
     }
     @Test fun weakCameraIsWatchOnly() {
         val e = engine()
-        e.onWifiScan(listOf(WifiObs("aa:bb:cc:00:00:02", "Cams", -92)))
+        e.onWifiScan(listOf(WifiObs("aa:bb:cc:00:00:02", "Cam-test", -92)))
         assertEquals(Level.WATCH, e.snapshot().camera.level)
     }
     @Test fun sisterNetworksFromOneRadioLogOnce() {
         val e = engine(); t = 1_700_000_000_000L   // a real-looking clock: emit's cooldown counts from 0
-        repeat(6) { t += 40 * 60_000L; e.onWifiScan(listOf(WifiObs("e0:b2:60:41:b1:79", "Cams", -88), WifiObs("e0:b2:60:41:b1:89", "Cams", -90))); e.snapshot() }
+        repeat(6) { t += 40 * 60_000L; e.onWifiScan(listOf(WifiObs("aa:bb:cc:dd:ee:79", "Cam-test", -88), WifiObs("aa:bb:cc:dd:ee:89", "Cam-test", -90))); e.snapshot() }
         assertEquals(1, e.snapshot().events.count { it.domain == "camera" })   // 4 h, two sister BSSIDs: still one entry
     }
     @Test fun markedCameraSourceIsNotFlagged() {
-        val mine = setOf("wifi:e0:b2:60:41:b1|Cams")
+        val mine = setOf("wifi:aa:bb:cc:dd:ee|Cam-test")
         val e = Engine({ t }, { _, _ -> }, isMine = { it in mine }).also { it.running = true; it.wifiEnabled = true }
-        e.onWifiScan(listOf(WifiObs("e0:b2:60:41:b1:79", "Cams", -88), WifiObs("e0:b2:60:41:b1:89", "Cams", -40)))
+        e.onWifiScan(listOf(WifiObs("aa:bb:cc:dd:ee:79", "Cam-test", -88), WifiObs("aa:bb:cc:dd:ee:89", "Cam-test", -40)))
         assertEquals(Level.OK, e.snapshot().camera.level)
     }
     @Test fun markedSourceDoesNotSilenceADifferentlyNamedNetwork() {
-        val e = Engine({ t }, { _, _ -> }, isMine = { it == "wifi:e0:b2:60:41:b1|Cams" }).also { it.running = true; it.wifiEnabled = true }
-        e.onWifiScan(listOf(WifiObs("e0:b2:60:41:b1:99", "SpyCam_1", -40)))
+        val e = Engine({ t }, { _, _ -> }, isMine = { it == "wifi:aa:bb:cc:dd:ee|Cam-test" }).also { it.running = true; it.wifiEnabled = true }
+        e.onWifiScan(listOf(WifiObs("aa:bb:cc:dd:ee:99", "SpyCam_1", -40)))
         assertEquals(Level.ALERT, e.snapshot().camera.level)
     }
     @Test fun flaggedItemOffersItsMineKey() {
         val e = engine()
-        e.onWifiScan(listOf(WifiObs("E0:B2:60:41:B1:79", "Cams", -88)))
-        assertEquals("wifi:e0:b2:60:41:b1|Cams", e.snapshot().camera.mineKey)
+        e.onWifiScan(listOf(WifiObs("AA:BB:CC:DD:EE:79", "Cam-test", -88)))
+        assertEquals("wifi:aa:bb:cc:dd:ee|Cam-test", e.snapshot().camera.mineKey)
     }
     @Test fun ordinaryNetworksAreOk() {
         val e = engine()
@@ -188,7 +188,7 @@ class WifiTest {
     }
     @Test fun staleWifiScanGoesQuiet() {
         val e = engine()
-        e.onWifiScan(listOf(WifiObs("aa:bb:cc:00:00:02", "Cams", -92)))
+        e.onWifiScan(listOf(WifiObs("aa:bb:cc:00:00:02", "Cam-test", -92)))
         t += 200_000
         assertEquals(Level.OFF, e.snapshot().camera.level)
     }
@@ -472,7 +472,7 @@ class SmartDevicesTest {
         assertEquals(SmartGroup.IOT, SmartDevices.classify("", "Espressif (IoT)"))
     }
     @Test fun ordinaryNamesAreNotClassified() {
-        assertNull(SmartDevices.classify("HAL9000")); assertNull(SmartDevices.classify("Dozer26")); assertNull(SmartDevices.classify("HP-Print-A4-ENVY 5530 series"))
+        assertNull(SmartDevices.classify("HomeNet")); assertNull(SmartDevices.classify("NeighborNet")); assertNull(SmartDevices.classify("HP-Print-A4-ENVY 5530 series"))
         assertNull(SmartDevices.classify("", "Apple"))
     }
 }
