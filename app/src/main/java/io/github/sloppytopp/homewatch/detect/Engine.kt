@@ -56,7 +56,8 @@ class Engine(
     /** Farthest the phone got from itself between [from] and [to], or null when there are too few GPS fixes to say. */
     internal fun movedM(from: Long, to: Long): Double? {
         val pts = phonePath.filter { it.first in from..to }
-        if (pts.size < 2) return null
+        // fail open: only vouch for "the phone stayed put" when GPS fixes cover most of the span; otherwise say nothing and let the alert stand
+        if (pts.size < 3 || pts.last().first - pts.first().first < (to - from) * 0.8) return null
         // linear time: farthest point from the first, then farthest from that one (a close lower bound on the true spread)
         val a = pts.maxBy { Geo.distanceM(pts[0].second, pts[0].third, it.second, it.third) }
         return pts.maxOf { Geo.distanceM(a.second, a.third, it.second, it.third) }

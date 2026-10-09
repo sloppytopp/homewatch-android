@@ -414,5 +414,6 @@ class FollowGpsTest {
     }
     @Test fun noGpsKeepsOldBehaviour() = assertTrue(run { null }.contains("FOLLOWED"))
     @Test fun phoneStayedPutIsNotFollowing() = assertFalse(run { 33.5 to -85.3 }.contains("FOLLOWED"))
+    @Test fun briefGpsCoverageDoesNotVetoTheAlert() = assertTrue(run { i -> if (i < 5) 33.5 to -85.3 else null }.contains("FOLLOWED"))
     @Test fun phoneThatTravelledIsFollowing() = assertTrue(run { i -> 33.5 + i * 0.0003 to -85.3 }.contains("FOLLOWED"))
 }
