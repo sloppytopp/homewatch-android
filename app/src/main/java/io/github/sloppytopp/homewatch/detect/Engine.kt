@@ -57,7 +57,9 @@ class Engine(
     internal fun movedM(from: Long, to: Long): Double? {
         val pts = phonePath.filter { it.first in from..to }
         if (pts.size < 2) return null
-        return pts.maxOf { a -> pts.maxOf { b -> Geo.distanceM(a.second, a.third, b.second, b.third) } }
+        // linear time: farthest point from the first, then farthest from that one (a close lower bound on the true spread)
+        val a = pts.maxBy { Geo.distanceM(pts[0].second, pts[0].third, it.second, it.third) }
+        return pts.maxOf { Geo.distanceM(a.second, a.third, it.second, it.third) }
     }
 
     private class Sighting(val kind: Kind, val label: String, val first: Long) {
