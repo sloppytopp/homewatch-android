@@ -55,7 +55,7 @@ class ScanService : Service() {
             lastWifiLogged = s.wifiAt
             s.wifi.forEach { pts += SurveyPoint(now, "wifi", "wifi:${it.bssid}", it.ssid, it.level, loc.latitude, loc.longitude, loc.accuracy, it.caps, it.freq, it.vendor, it.klass) }
         }
-        s.trackers.forEach { pts += SurveyPoint(now, "tracker", "ble:${it.addr}", it.label, it.rssi, loc.latitude, loc.longitude, loc.accuracy) }
+        s.trackers.filter { it.agoS <= 15 }.forEach { pts += SurveyPoint(now, "tracker", "ble:${it.addr}", it.label, it.rssi, loc.latitude, loc.longitude, loc.accuracy) }
         if (Monitor.inspecting) s.inspect.filter { it.name.isNotEmpty() || it.company.isNotEmpty() }.forEach {
             pts += SurveyPoint(now, "ble", "ble:${it.addr}", it.name.ifEmpty { it.company }, it.rssi, loc.latitude, loc.longitude, loc.accuracy)
         }

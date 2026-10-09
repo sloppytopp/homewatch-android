@@ -215,7 +215,8 @@ class Engine(
 
         // ---- following: log each unknown tracker about once a minute with where we are (Wi-Fi fingerprint), then look for the same one at several places
         if (!demoMode && wifiFresh && placeFp.isNotEmpty()) trackers.forEach { (a, s) ->
-            if (now - (lastTrail[a] ?: 0L) >= TRAIL_EVERY_MS) {
+            // only a tracker heard just now says anything about WHERE it is: the 5-minute "current" window would otherwise log it at places it never was
+            if (now - s.last <= FRESH_HEARD_MS && now - (lastTrail[a] ?: 0L) >= TRAIL_EVERY_MS) {
                 lastTrail[a] = now
                 Sight(now, a, s.label, placeFp).also { trail += it; trailSink(it) }
                 while (trail.size > MAX_TRAIL) trail.removeAt(0)
@@ -351,6 +352,7 @@ class Engine(
         const val MAX_KNOWN_NETS = 5000
         const val TRAIL_EVERY_MS = 60_000L
         const val MAX_TRAIL = 6000
+        const val FRESH_HEARD_MS = 15_000L   // a tracker counts as "here right now" only if heard this recently (survey rows and following trail)
         const val FOLLOW_CARD_MS = 6 * 3_600_000L   // an old follow timeline is history (see Evidence), not a live warning
         const val MIN_MOVE_M = 150.0        // "followed you" needs the phone to have travelled at least this far, when GPS can tell
         val COMPANIES = mapOf(

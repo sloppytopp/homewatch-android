@@ -636,3 +636,23 @@ class SpamClassifierTest {
         assertEquals(Level.WATCH, s.spam.level); assertTrue(s.events.any { it.domain == "bluetooth" })
     }
 }
+
+
+class StaleSightingTest {
+    private val tile = Classification(Kind.TRACKER, "Tile tracker")
+    @Test fun aTrackerThatLeftRangeIsNotLoggedAtNewPlaces() {
+        var t = 1_700_000_000_000L; val logged = mutableListOf<Sight>()
+        val e = Engine({ t }, { _, _ -> }, trailSink = { logged += it }).also { it.running = true; it.wifiEnabled = true }
+        fun scan(g: Int) = e.onWifiScan(listOf(WifiObs("aa:00:00:00:0$g:01", "n1", -50), WifiObs("aa:00:00:00:0$g:02", "n2", -55)))
+        scan(0); e.onAdvertisement("T1", -58, tile); e.snapshot()            // heard at home
+        val atHome = logged.size; assertTrue(atHome >= 1)
+        repeat(8) { t += 30_000; scan(it + 1); e.snapshot() }                 // driving away for 4 min, never heard again
+        assertEquals("stale tracker was logged at places it never was", atHome, logged.size)
+    }
+    @Test fun aTrackerHeardAtEachPlaceStillCounts() {
+        var t = 1_700_000_000_000L; val logged = mutableListOf<Sight>()
+        val e = Engine({ t }, { _, _ -> }, trailSink = { logged += it }).also { it.running = true; it.wifiEnabled = true }
+        repeat(6) { i -> t += 60_000; e.onWifiScan(listOf(WifiObs("bb:00:00:00:0${i / 3}:01", "n1", -50), WifiObs("bb:00:00:00:0${i / 3}:02", "n2", -55))); e.onAdvertisement("T1", -60, tile); e.snapshot() }
+        assertEquals(6, logged.size)
+    }
+}
