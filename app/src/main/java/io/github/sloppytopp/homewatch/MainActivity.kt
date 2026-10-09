@@ -27,6 +27,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
@@ -76,6 +77,7 @@ import io.github.sloppytopp.homewatch.ui.Level
 import io.github.sloppytopp.homewatch.ui.RadarView
 import io.github.sloppytopp.homewatch.ui.RoomsScreen
 import io.github.sloppytopp.homewatch.ui.SettingsScreen
+import io.github.sloppytopp.homewatch.ui.SmartScreen
 import io.github.sloppytopp.homewatch.ui.SurveyCard
 import io.github.sloppytopp.homewatch.ui.StatusTile
 import io.github.sloppytopp.homewatch.ui.UiColors
@@ -157,10 +159,10 @@ private fun Root() {
             Switch(checked = Prefs.night, onCheckedChange = { Prefs.saveNight(it) })
         }
         Row(Modifier.fillMaxWidth().padding(horizontal = 4.dp), horizontalArrangement = Arrangement.SpaceBetween) {
-            listOf("Status", "Nearby", "Rooms", "Radar", "History", "Settings").forEachIndexed { i, name ->
-                TextButton(onClick = { tab = i }, contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 6.dp)) {
+            listOf("Status", "Nearby", "Rooms", "Radar", "History", "Settings", "Smart").forEachIndexed { i, name ->
+                TextButton(onClick = { tab = i }, modifier = Modifier.defaultMinSize(minWidth = 1.dp), contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 3.dp)) {
                     Column(horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally) {
-                        Text(name, color = if (tab == i) UiColors.text else UiColors.faint, fontSize = 13.sp,
+                        Text(name, color = if (tab == i) UiColors.text else UiColors.faint, fontSize = 12.sp,
                             fontWeight = if (tab == i) androidx.compose.ui.text.font.FontWeight.SemiBold else androidx.compose.ui.text.font.FontWeight.Normal)
                         // underline marks the open tab; the text size no longer changes, so the row stops shifting
                         Box(Modifier.padding(top = 2.dp).height(2.dp).width(if (tab == i) 18.dp else 0.dp).background(UiColors.good))
@@ -175,7 +177,8 @@ private fun Root() {
                 2 -> RoomsScreen()
                 3 -> { RadarView(Monitor.snapshot); Text("Drone map", color = UiColors.text, fontSize = 16.sp); DroneMapView(Monitor.snapshot); SurveyCard() }
                 4 -> HistoryScreen()
-                else -> SettingsScreen()
+                5 -> SettingsScreen()
+                else -> SmartScreen()
             }
         }
     }

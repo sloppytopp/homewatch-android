@@ -456,3 +456,37 @@ class FindAidTest {
         assertEquals("12 dB weaker than your best spot", FindAid.versusBest(-62, -50))
     }
 }
+
+
+class SmartDevicesTest {
+    @Test fun groupsByName() {
+        assertEquals(SmartGroup.AMAZON, SmartDevices.classify("Echo Dot-4TQ"))
+        assertEquals(SmartGroup.AMAZON, SmartDevices.classify("Ring-a1b2c3"))
+        assertEquals(SmartGroup.GOOGLE, SmartDevices.classify("Nest-Hub-93"))
+        assertEquals(SmartGroup.CAMERA, SmartDevices.classify("Wyze_Cam_V3"))
+        assertEquals(SmartGroup.IOT, SmartDevices.classify("ESP_1A2B3C"))
+        assertEquals(SmartGroup.CAMERA, SmartDevices.classify("whatever", klass = "camera"))
+    }
+    @Test fun byCompanyWhenNameIsEmpty() {
+        assertEquals(SmartGroup.AMAZON, SmartDevices.classify("", "Amazon"))
+        assertEquals(SmartGroup.IOT, SmartDevices.classify("", "Espressif (IoT)"))
+    }
+    @Test fun ordinaryNamesAreNotClassified() {
+        assertNull(SmartDevices.classify("HAL9000")); assertNull(SmartDevices.classify("Dozer26")); assertNull(SmartDevices.classify("HP-Print-A4-ENVY 5530 series"))
+        assertNull(SmartDevices.classify("", "Apple"))
+    }
+}
+
+
+class FollowCardTest {
+    private fun sights(base: Long) = (0 until 60).map { Sight(base + it * 60_000L, "T1", "Tile tracker", setOf("a${it / 15}", "b${it / 15}", "c${it / 15}")) }
+    @Test fun oldHitsAndMineAreNotShownAsLive() {
+        val base = 1_700_000_000_000L; var t = base + 60 * 60_000L
+        var mine = false
+        val e = Engine({ t }, { _, _ -> }, isMine = { mine && it == "T1" }).also { it.running = true; it.wifiEnabled = true }
+        e.loadTrail(sights(base)); e.snapshot()
+        assertEquals(1, e.snapshot().follow.size)          // just happened: shown
+        mine = true; assertEquals(0, e.snapshot().follow.size)   // marked yours: never shown
+        mine = false; t += 7 * 3_600_000L; assertEquals(0, e.snapshot().follow.size)   // 7 h later: history, not a live card
+    }
+}

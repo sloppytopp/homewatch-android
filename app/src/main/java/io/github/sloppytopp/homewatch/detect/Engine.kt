@@ -307,7 +307,7 @@ class Engine(
             wifi = if (wifiFresh) wifiRows else emptyList(),
             fixes = fixes,
             adsSeen = adsSeen, ambientIgnored = ambient, events = events.toList(), error = error,
-            startedAt = startedAt, wifiAt = wifiAt, now = now, demo = demoMode, follow = followHits,
+            startedAt = startedAt, wifiAt = wifiAt, now = now, demo = demoMode, follow = followHits.filter { h -> !isMine(h.key) && now - h.visits.maxOf { it.last } <= FOLLOW_CARD_MS },
             inspect = inspect.entries.filter { now - it.value.last <= 60_000 }
                 .map { (a, x) -> InspectRow(a, x.name, x.rssi, x.company, (now - x.last) / 1000) }.sortedByDescending { it.rssi },
         )
@@ -338,6 +338,7 @@ class Engine(
         const val MAX_KNOWN_NETS = 5000
         const val TRAIL_EVERY_MS = 60_000L
         const val MAX_TRAIL = 6000
+        const val FOLLOW_CARD_MS = 6 * 3_600_000L   // an old follow timeline is history (see Evidence), not a live warning
         const val MIN_MOVE_M = 150.0        // "followed you" needs the phone to have travelled at least this far, when GPS can tell
         val COMPANIES = mapOf(
             0x004C to "Apple", 0x0075 to "Samsung", 0x0006 to "Microsoft", 0x00E0 to "Google", 0x0087 to "Garmin",
