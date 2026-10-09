@@ -61,3 +61,10 @@ No internet permission, no accounts, no analytics. History stays on the phone an
 ## Credits
 
 Stalkerware indicators: Coalition Against Stalkerware / Echap, [stalkerware-indicators](https://github.com/AssoEchap/stalkerware-indicators), CC BY 4.0. For advice on staying safe: the National Domestic Violence Hotline (US 1-800-799-7233) and [techsafety.org](https://www.techsafety.org).
+
+## Physical inspection and the lens finder
+**Physical-inspection checklist.** Most real finds are physical, which a phone cannot do for you. Each room gets a checklist (ceiling fittings, outlets and chargers, objects facing the bed or sofa, lens-glint sweep, infrared dots, TVs and speakers, mirrors, furniture, router device list, anything that changed; plus bedroom, bathroom, rental and car extras). Ticks are stored on the phone and listed in the sweep report, including every item left unchecked. A finished list means "I looked here", never "this room is clear".
+
+**Lens finder.** Uses the rear camera with the torch on and exposure turned down. In each frame it looks for compact, saturated bright points on a dark surround (large bright areas, bright surroundings and thin streaks are rejected) and rings them. A lens lit by a nearby light can reflect a tiny bright point back; so can screws, jewellery and glass, so a ring is only a place to look. It needs a dark room and cannot see lenses that are shielded or not lit. Frames are analysed in memory and discarded: nothing is saved or sent, and the camera and torch are released when you close it. It needs the Camera permission, which Android asks for on first use.
+
+**Sweep report.** The evidence report plus a scope section: areas covered, per-room radio sweep and checklist status, the tracker-following result, findings by area, and a list of methods a phone cannot perform (non-linear junction detection, wideband RF analysis, thermal imaging, wired/telephone/cellular checks, a trained examiner). The conclusion never says a place is "clear". It uses the same tamper-evident hash chain, which also covers the scope section.

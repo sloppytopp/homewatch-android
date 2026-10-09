@@ -17,6 +17,8 @@ _All screenshots use the built-in sample data - no real networks or places._
 - **Trackers**: finds Bluetooth trackers separated from their owner (Apple Find My / AirTag-style, Tile, Samsung SmartTag, Chipolo). Normal "owner nearby" signals are ignored on purpose.
 - **Drones**: listens for FAA **Remote ID** broadcasts over Bluetooth and Wi-Fi - worded as *claims*, because Remote ID can be faked.
 - **Camera-like Wi-Fi**: flags networks that look like cameras or drones (by name and maker).
+- **Smart devices**: groups nearby gadgets by maker (Amazon, Google, Samsung, cameras, plugs) and walks you through the Sidewalk / Ring / Alexa privacy settings.
+- **TSCM-style tools**: a physical-inspection checklist per room, a camera-lens finder (torch + dark-room glint detection), and a sweep report that lists what was and was **not** checked.
 - **One plain answer** - "All clear" / "Keeping an eye on something" / "Needs your attention" - with live proof it is working (heartbeat, scan ages, counts).
 - **Tap-to-find**: tap an alert for a hot/cold meter, a warmer/colder arrow, a real compass sweep (trackers), or a GPS + compass arrow with distance (drones that broadcast a position).
 - **Room sweeps**: baseline each room, spot what is *new*, and see which room a device is probably in - without GPS.
@@ -71,6 +73,7 @@ If the fingerprint is different, it is not an official build - don't install it.
 | Location | Required by Android 11 and older for Bluetooth/Wi-Fi scanning; used on request for your home position and survey walks. Never uploaded |
 | Nearby Wi-Fi devices (Android 13+) | Scan Wi-Fi networks |
 | Foreground service, notifications, vibrate | Keep scanning in the background; soft chime/vibrate alerts (never a voice) |
+| Camera | Only for the Lens finder, only while you have it open: torch + camera to spot lens glints. Pictures are analysed in memory and discarded; nothing is saved or sent. Optional: deny it and the rest works |
 
 No internet permission. See [PRIVACY.md](PRIVACY.md).
 
