@@ -490,3 +490,25 @@ class FollowCardTest {
         mine = false; t += 7 * 3_600_000L; assertEquals(0, e.snapshot().follow.size)   // 7 h later: history, not a live card
     }
 }
+
+
+class InspectionTest {
+    @Test fun carGetsCarItemsOnly() {
+        val ids = Inspection.itemsFor("Car").map { it.id }
+        assertTrue("obd" in ids && "under" in ids); assertFalse("ceil" in ids)
+    }
+    @Test fun roomsGetExtrasByName() {
+        assertTrue("bed" in Inspection.itemsFor("Master Bedroom").map { it.id })
+        assertTrue("bath" in Inspection.itemsFor("Bathroom").map { it.id })
+        assertFalse("bed" in Inspection.itemsFor("Kitchen").map { it.id })
+    }
+    @Test fun idsAreUniquePerRoom() {
+        listOf("Car", "Bedroom", "Bathroom", "Hotel room", "Kitchen").forEach { r ->
+            val ids = Inspection.itemsFor(r).map { it.id }; assertEquals(r, ids.size, ids.toSet().size)
+        }
+    }
+    @Test fun progressCountsOnlyKnownIds() {
+        val (n, t) = Inspection.progress("Kitchen", setOf("ceil", "outlets", "not-an-item"))
+        assertEquals(2, n); assertEquals(Inspection.itemsFor("Kitchen").size, t)
+    }
+}

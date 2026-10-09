@@ -24,6 +24,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.github.sloppytopp.homewatch.data.Prefs
 import io.github.sloppytopp.homewatch.data.Store
+import io.github.sloppytopp.homewatch.detect.Inspection
 import io.github.sloppytopp.homewatch.detect.RoomBook
 import io.github.sloppytopp.homewatch.detect.SweepCollector
 import io.github.sloppytopp.homewatch.scan.Monitor
@@ -96,6 +97,7 @@ fun RoomsScreen() {
                     ) { Text("Sweep this room", fontSize = 13.sp) }
                     TextButton(onClick = { Store.deleteRoom(room); Prefs.removeRoom(room); version++ }, enabled = sweeping == null) { Text("Remove", color = UiColors.warn) }
                 }
+                InspectionChecklist(room)
             }
         }
 
@@ -123,5 +125,31 @@ fun RoomsScreen() {
         }
         Text("Room data stays on this phone; \"Delete all history\" erases it too. Bluetooth phones and watches change address often, so unnamed Bluetooth devices are left out of comparisons.",
             color = UiColors.faint, fontSize = 11.sp)
+    }
+}
+
+
+/** Tick-off physical inspection for one room: the half of a sweep a phone can't do by radio. */
+@Composable
+private fun InspectionChecklist(room: String) {
+    var open by remember { mutableStateOf(false) }
+    val done = Prefs.inspected[room] ?: emptySet()
+    val (n, total) = Inspection.progress(room, done)
+    TextButton(onClick = { open = !open }) { Text((if (open) "▾  " else "▸  ") + "Physical inspection ($n of $total checked)", color = UiColors.text, fontSize = 13.sp) }
+    if (!open) return
+    Column(verticalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.padding(start = 8.dp)) {
+        Text("Most real finds are physical. Go item by item, tick what you've actually looked at.", color = UiColors.dim, fontSize = 12.sp)
+        Inspection.itemsFor(room).forEach { item ->
+            Row(verticalAlignment = androidx.compose.ui.Alignment.Top) {
+                androidx.compose.material3.Checkbox(checked = item.id in done, onCheckedChange = { Prefs.toggleInspection(room, item.id) })
+                Column(Modifier.padding(top = 10.dp)) {
+                    Text(item.where, color = UiColors.text, fontSize = 13.sp)
+                    Text(item.how, color = UiColors.dim, fontSize = 12.sp)
+                }
+            }
+        }
+        Text("If you find something you don't own: leave it where it is, photograph it, note the time, and talk to an advocate or the police before removing it. " +
+            "A fully ticked list means you looked in these places, not that the room is clear: a phone can't see dormant, wired or cellular devices.", color = UiColors.faint, fontSize = 11.sp)
+        if (n > 0) TextButton(onClick = { Prefs.resetInspection(room) }) { Text("Start this checklist over", color = UiColors.warn, fontSize = 12.sp) }
     }
 }

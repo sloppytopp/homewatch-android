@@ -73,7 +73,7 @@ fun HistoryScreen() {
         containerColor = UiColors.dialogBg, titleContentColor = UiColors.text, textContentColor = UiColors.text,
         onDismissRequest = { confirm = false }, title = { Text("Delete all history?") },
         text = { Text("This removes every saved event and beep from this phone. It cannot be undone.") },
-        confirmButton = { TextButton(onClick = { Store.clearAll(); io.github.sloppytopp.homewatch.scan.Monitor.engine.clearTrail(); io.github.sloppytopp.homewatch.scan.Monitor.engine.loadKnownNets(emptySet()); v++; confirm = false }) { Text("Delete") } },
+        confirmButton = { TextButton(onClick = { Store.clearAll(); io.github.sloppytopp.homewatch.data.Prefs.clearInspections(); io.github.sloppytopp.homewatch.scan.Monitor.engine.clearTrail(); io.github.sloppytopp.homewatch.scan.Monitor.engine.loadKnownNets(emptySet()); v++; confirm = false }) { Text("Delete") } },
         dismissButton = { TextButton(onClick = { confirm = false }) { Text("Cancel") } },
     )
 }

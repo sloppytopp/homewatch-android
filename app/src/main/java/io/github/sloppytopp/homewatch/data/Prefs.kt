@@ -29,6 +29,8 @@ object Prefs {
     var rooms by mutableStateOf<List<String>>(emptyList()); private set
     var hasPin by mutableStateOf(false); private set
     var launcher by mutableStateOf(0); private set   // 0 N0RMA, 1 Notes, 2 Weather
+    /** Physical-inspection checklist: room -> ids of the items ticked off. */
+    var inspected by mutableStateOf<Map<String, Set<String>>>(emptyMap()); private set
 
     fun init(ctx: Context) {
         sp = ctx.getSharedPreferences("homewatch", Context.MODE_PRIVATE)
@@ -42,7 +44,17 @@ object Prefs {
         hasPin = sp.contains("pin_hash")
         launcher = sp.getInt("launcher", 0)
         mySsids = sp.getStringSet("my_ssids", emptySet()) ?: emptySet()
+        inspected = sp.all.filterKeys { it.startsWith("insp_") }.mapKeys { it.key.removePrefix("insp_") }
+            .mapValues { (it.value as? Set<*>)?.filterIsInstance<String>()?.toSet() ?: emptySet() }
     }
+
+    fun toggleInspection(room: String, id: String) {
+        val cur = inspected[room] ?: emptySet()
+        val next = if (id in cur) cur - id else cur + id
+        inspected = inspected + (room to next); sp.edit().putStringSet("insp_$room", next).apply()
+    }
+    fun resetInspection(room: String) { inspected = inspected - room; sp.edit().remove("insp_$room").apply() }
+    fun clearInspections() { sp.edit().also { e -> inspected.keys.forEach { e.remove("insp_$it") } }.apply(); inspected = emptyMap() }
 
     fun isMine(addr: String) = addr in myDevices
     fun markMine(addr: String) { myDevices = myDevices + addr; sp.edit().putStringSet("my_devices", myDevices).apply() }
@@ -64,7 +76,7 @@ object Prefs {
     fun forgetSsid(ssid: String) { mySsids = mySsids - ssid; sp.edit().putStringSet("my_ssids", mySsids).apply() }
 
     fun addRoom(name: String) { val n = name.trim().take(24).replace("|", ""); if (n.isNotEmpty() && n !in rooms) { rooms = rooms + n; sp.edit().putString("rooms", rooms.joinToString("|")).apply() } }
-    fun removeRoom(name: String) { rooms = rooms - name; sp.edit().putString("rooms", rooms.joinToString("|")).apply() }
+    fun removeRoom(name: String) { resetInspection(name); rooms = rooms - name; sp.edit().putString("rooms", rooms.joinToString("|")).apply() }
 
     fun saveDiscreet(v: Boolean) { discreet = v; sp.edit().putBoolean("discreet", v).apply() }
 
