@@ -1,5 +1,6 @@
 # Changelog
-## Unreleased
+## 0.7.0-beta1 (pre-release)
+- Detect: Bluetooth pairing pop-up flood (Flipper Zero / phone-app Bluetooth spam) - behaviour test, not yet verified against real Flipper hardware
 - Smart devices tab (nearby gadgets by maker, privacy checklist, DeFlock link); "This is mine" on Status and My devices list; one alert per camera radio
 - TSCM tools: physical-inspection checklist per room, camera-lens finder (new optional CAMERA permission, nothing stored or sent), TSCM-style sweep report
 - Survey: write-time gate and automatic thinning; fix "app not responding" on long walks
