@@ -417,3 +417,26 @@ class FollowGpsTest {
     @Test fun briefGpsCoverageDoesNotVetoTheAlert() = assertTrue(run { i -> if (i < 5) 33.5 to -85.3 else null }.contains("FOLLOWED"))
     @Test fun phoneThatTravelledIsFollowing() = assertTrue(run { i -> 33.5 + i * 0.0003 to -85.3 }.contains("FOLLOWED"))
 }
+
+
+class SurveyGateTest {
+    private fun p(ts: Long, key: String = "ble:T", rssi: Int = -60, lat: Double = 33.5, lon: Double = -85.3) =
+        SurveyPoint(ts, "tracker", key, "t", rssi, lat, lon, 5f)
+    @Test fun standingStillLogsOncePerHalfMinute() {
+        val g = SurveyGate()
+        val kept = (0 until 1000).count { g.keep(p(it * 3_000L)) }   // 50 min at one spot, one point every 3 s
+        assertTrue("kept $kept", kept <= 101)
+    }
+    @Test fun movingKeepsPoints() {
+        val g = SurveyGate()
+        assertEquals(20, (0 until 20).count { g.keep(p(it * 3_000L, lat = 33.5 + it * 0.0001)) })   // ~11 m per step
+    }
+    @Test fun signalJumpIsKept() {
+        val g = SurveyGate()
+        assertTrue(g.keep(p(0))); assertFalse(g.keep(p(3_000))); assertTrue(g.keep(p(6_000, rssi = -45)))
+    }
+    @Test fun sourcesAreIndependent() {
+        val g = SurveyGate()
+        assertTrue(g.keep(p(0, "a"))); assertTrue(g.keep(p(1_000, "b"))); assertFalse(g.keep(p(2_000, "a")))
+    }
+}

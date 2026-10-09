@@ -30,6 +30,7 @@ class ScanService : Service() {
     private var wifiN = 0
     private var locListener: LocationListener? = null
     private var lastWifiLogged = 0L
+    private val surveyGate = io.github.sloppytopp.homewatch.detect.SurveyGate()
 
     @android.annotation.SuppressLint("MissingPermission")
     private fun syncSurvey() {
@@ -58,7 +59,8 @@ class ScanService : Service() {
         if (Monitor.inspecting) s.inspect.filter { it.name.isNotEmpty() || it.company.isNotEmpty() }.forEach {
             pts += SurveyPoint(now, "ble", "ble:${it.addr}", it.name.ifEmpty { it.company }, it.rssi, loc.latitude, loc.longitude, loc.accuracy)
         }
-        if (pts.isNotEmpty()) { Store.addSurvey(pts); Monitor.surveyCount += pts.size }
+        val keep = pts.filter { surveyGate.keep(it) }
+        if (keep.isNotEmpty()) { Store.addSurvey(keep); Monitor.surveyCount += keep.size }
     }
     private val tick = object : Runnable {
         override fun run() {

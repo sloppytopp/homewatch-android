@@ -15,6 +15,23 @@ data class SurveyPoint(
     val caps: String = "", val freq: Int = 0, val vendor: String = "", val klass: String = "",
 )
 
+/**
+ * Write-time gate for survey points: a source standing still next to a stationary phone would otherwise be logged every 3 s forever.
+ * A point is kept if it is the first for its source, the phone moved, enough time passed, or the signal changed noticeably.
+ */
+class SurveyGate(private val minMoveM: Double = 3.0, private val minGapMs: Long = 30_000, private val minRssiDelta: Int = 6) {
+    private class Last(val ts: Long, val lat: Double, val lon: Double, val rssi: Int)
+    private val last = HashMap<String, Last>()
+
+    fun keep(p: SurveyPoint): Boolean {
+        val l = last[p.key]
+        val ok = l == null || p.ts - l.ts >= minGapMs || Math.abs(p.rssi - l.rssi) >= minRssiDelta ||
+            Geo.distanceM(p.lat, p.lon, l.lat, l.lon) >= minMoveM
+        if (ok) { last[p.key] = Last(p.ts, p.lat, p.lon, p.rssi); if (last.size > 5000) last.clear() }
+        return ok
+    }
+}
+
 class Estimate(
     val key: String, val kind: String, val label: String, val lat: Double, val lon: Double, val radiusM: Double,
     val samples: Int, val bestRssi: Int, val vendor: String, val klass: String, val caps: String,

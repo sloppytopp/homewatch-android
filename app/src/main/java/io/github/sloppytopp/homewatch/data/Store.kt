@@ -15,6 +15,8 @@ import io.github.sloppytopp.homewatch.detect.RoomScan
 object Store {
     private lateinit var helper: SQLiteOpenHelper
     private const val KEEP_DAYS = 30
+    private const val SURVEY_THIN_ABOVE = 15_000
+    private const val SURVEY_HARD_CAP = 40_000
 
     fun init(ctx: Context) {
         helper = object : SQLiteOpenHelper(ctx, "homewatch.db", null, 5) {
@@ -27,6 +29,7 @@ object Store {
             override fun onUpgrade(db: SQLiteDatabase, o: Int, n: Int) { if (o < 2) createRoomTables(db); if (o < 3) createSurveyTable(db); if (o < 4) createTrailTable(db); if (o < 5) createKnownNetTable(db) }
         }
         prune()
+        Thread { runCatching { thinSurvey() } }.start()   // off the UI thread: a long walk leaves tens of thousands of rows
     }
 
     private fun createKnownNetTable(db: SQLiteDatabase) {
@@ -91,6 +94,21 @@ object Store {
                 it.getFloat(7), it.getString(8) ?: "", it.getInt(9), it.getString(10) ?: "", it.getString(11) ?: "")
         }
         return out
+    }
+
+    /**
+     * Shrink an oversized survey: keep, per source and ~11 m grid cell, only the loudest sighting. Position estimates use the loudest
+     * sightings and the spread between places, so they barely change; a stationary phone's thousands of repeats collapse to a few.
+     * Returns how many rows were removed. Does nothing under [SURVEY_THIN_ABOVE] rows.
+     */
+    @Synchronized fun thinSurvey(): Int {
+        val db = helper.writableDatabase
+        val before = surveyCount()
+        if (before <= SURVEY_THIN_ABOVE) return 0
+        db.execSQL("DELETE FROM survey WHERE rowid NOT IN (SELECT rowid FROM survey GROUP BY key, ROUND(lat,4), ROUND(lon,4) HAVING rssi = MAX(rssi))")
+        // hard cap as a last resort: drop the oldest
+        db.execSQL("DELETE FROM survey WHERE rowid IN (SELECT rowid FROM survey ORDER BY ts DESC LIMIT -1 OFFSET $SURVEY_HARD_CAP)")
+        return before - surveyCount()
     }
 
     @Synchronized fun surveyCount(): Int = helper.readableDatabase.rawQuery("SELECT COUNT(*) FROM survey", null).use { if (it.moveToFirst()) it.getInt(0) else 0 }
